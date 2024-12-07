@@ -18,6 +18,7 @@ library(janitor)
 library(openxlsx)
 library(stringr)
 library(arrow)
+library(tidyr)
 ```
 
 ## Getting the data
@@ -119,13 +120,21 @@ The ONS alcohol-specific death data is publicly available at the URI in this fun
 ```{r}
 get_ons_alcohol_specific_death_data <- 
   function(){
+    
 url <- 
-  "https://www.ons.gov.uk/file?uri=/peoplepopulationandcommunity/birthsdeathsandmarriages/deaths/datasets/alcoholspecificdeathsintheuk/current/alcoholspecificdeaths2022.xlsx"
+  "https://www.ons.gov.uk/file?uri=/peoplepopulationandcommunity/healthandsocialcare/causesofdeath/datasets/alcoholspecificdeathsbysexagegroupandindividualcauseofdeath/current/deathsbyindividualcause.xlsx"
 
+alc_specific_deaths <- 
 read.xlsx(
-  xlsxFile = url, rows = 6, cols = 4,colNames = FALSE, sheet = "Table_2") |>
-  `colnames<-`("alcohol_specific_deaths_eng_2022")
-
+  xlsxFile = url, rows = c(5:50), cols = c(1:24),colNames = TRUE, sheet = "Table 2") %>% 
+  rename_with(.fn = janitor::make_clean_names, .cols = 1:4)  |> 
+  rename("period" = year_note_3) %>% 
+  filter(sex != "Persons") |> 
+  tidyr::pivot_longer(cols = `<1`:`90+`, names_to = "age_group", values_to = "count") |> 
+  group_by(sex, age_group) |> 
+  summarise(count = sum(count), .groups = "drop")
+ 
+return(alc_specific_deaths)
 }
 ```
 
@@ -137,16 +146,18 @@ This function downloads, re-labels, and reshapes the ONS life tables for use in 
 get_life_tables <- function() {
     url <- "https://www.ons.gov.uk/file?uri=/peoplepopulationandcommunity/birthsdeathsandmarriages/lifeexpectancies/datasets/nationallifetablesunitedkingdomreferencetables/current/nltuk198020203.xlsx"
     
-    life_tables <- read.xlsx(
-      xlsxFile = url,
-      sheet = "2020-2022",
-      startRow = 6
-    ) |>
-      rename_with(.cols = 1:6, ~paste0(.x, "_male")) |>
-      rename_with(.cols = 7:12, ~paste0(.x, "_female")) |>
-      select(age_male, ex_male, age_female, ex_female) |>
-      pivot_longer(cols = contains("age"), values_to = "age", names_to = "sex") |>
-      mutate(sex = str_remove(sex, "age_"))
+    life_tables <- 
+        read.xlsx(
+        xlsxFile = url,
+        sheet = "2020-2022",
+        startRow = 6
+      ) |>
+        rename_with(.cols = 1:6, ~paste0(.x, "_male")) |>
+        rename_with(.cols = 7:12, ~paste0(.x, "_female")) |>
+        select(ex_male, age_female, ex_female) |>
+        pivot_longer(cols = contains("ex"), values_to = "ex", names_to = "sex") |>
+        mutate(sex = str_remove(sex, "ex_")) |> 
+        rename("age" = age_female)
     
     return(life_tables)
 }
@@ -468,6 +479,13 @@ deaths_by_age <-
   ) |>
   group_by(age, sex) |>
   summarise(count = sum(count), .groups = "drop")
+
+deaths_by_age  <- 
+deaths_by_age |> 
+  mutate(age_group = assign_age_group(ages = pull(deaths_by_age, age), age_df = age_df)) |> 
+  group_by(sex, age_group) |> 
+  summarise(count = sum(count), .groups = "drop")
+
 
 return(deaths_by_age)
 
