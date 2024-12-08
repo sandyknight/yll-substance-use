@@ -154,6 +154,8 @@ get_life_tables <- function() {
 
 ## Data processing and preparation
 
+The functions in this section take the output of functions from the previous section and return a processed data frame.
+
 ### Drug deaths
 
 The following two functions were written to allow other analyses of drug deaths and have more flexibilty (and therefore are unfortunately long and complicated) than is necessary for the YLL analysis. They should both take the output of the corresponding `get_*_data()` functions as the `data` argument. For this analysis we'll choose to group the data by age and sex, and use date of occurrence rater than registration. 
@@ -534,6 +536,10 @@ merge_alcohol_deaths <- function() {
 
 
 ```
+
+## Calculating years of life lost (YLL)
+
+The functions in this section use the previously defined functions to produce the final YLL outputs when called. They do not take any arguments. 
 
 This function calculates the "crude" years of life lost. 
 
