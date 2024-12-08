@@ -2,9 +2,15 @@
 title: "yll-substance-misuse"
 author: "Sandy Knight"
 date: "2024-12-07"
+output: 
+  html_document:
+    theme: darkly
+    toc: yes
+    toc_float:
+      collapsed: true
 ---
 
-## Required packages
+
 ```{r, warning=FALSE, message=FALSE}
 library(dplyr)
 library(ggplot2)
@@ -13,6 +19,8 @@ library(openxlsx)
 library(stringr)
 library(arrow)
 library(tidyr)
+library(glue)
+library(scales)
 ```
 
 ## Getting the data
@@ -111,7 +119,7 @@ return(np_deaths )
 
 The ONS alcohol-specific death data is publicly available at the URI in this function. This function downloads, reshapes, and returns the relevant ONS data.
 
-```{r}
+```{r function-get_ons_alcohol_specific_death_data}
 get_ons_alcohol_specific_death_data <- 
   function(){
     
@@ -541,6 +549,8 @@ merge_alcohol_deaths <- function() {
 
 ```
 
+## Calculating years of life lost (YLL)
+
 This function calculates the "crude" years of life lost. 
 
 The crude expected years of life lost is:
@@ -615,6 +625,12 @@ calculate_crude_yll <- function() {
 
 This function is from [here](https://static-content.springer.com/esm/art%3A10.1186%2F1471-2458-8-116/MediaObjects/12889_2007_1086_MOESM3_ESM.pdf)[^2]. It uses the same basic method but applies discounting and age-weighting according to parameters calibrated and chosen in the GBD. 
 
+The formula is:
+
+$$
+Y_x = d_x \left[ \frac{KCe^{r(n^a_x)}}{(r+\beta)^2} \left( e^{z[-(r+\beta)(e^s_x + a_x) - 1]} - e^{-(r+\beta)a_x[-(r+\beta)a_x - 1]} \right) + \frac{1-K}{r} (1 - e^{r(e^s_x)}) \right]
+$$
+
 ```{r function-calculate_yll}
 
 calculate_yll <-
@@ -655,6 +671,9 @@ calculate_substance_use_yll <- function() {
   age_df <- 
     parse_age_groups(unique(pull(alcohol_deaths, age_group)))
 
+  # Load life tables
+  life_tables <- 
+    get_life_tables()
   # Incorporate age groups into life tables, then compute average age and life expectancy (ex) for each age group and sex
   life_tables <-
     life_tables |>
@@ -699,6 +718,88 @@ calculate_substance_use_yll <- function() {
 }
 
 ```
+
+## Plotting results
+
+### Plot crude estimate
+
+Produces a plot of the crude YLL estimate. Sources two scripts that define `ggplot2` aesthetics but don't contibute to the analysis.
+
+```{r function-plot_crude_yll_estimate}
+plot_crude_yll_estimate <- 
+  function(){
+source("R/dhsc_colour_palette.R")
+source("R/themes.R")
+crude_yll <-
+  calculate_crude_yll()
+
+p <- 
+crude_yll  |> 
+  ggplot(aes(x = age_group, y = yll)) +
+  geom_col(aes(fill = substance), colour = "black") +
+  scale_y_continuous(labels = scales::comma) +
+  labs(
+    title = "Estimated years of life lost (YLL), due to substance use",
+    subtitle = glue::glue("Total YLL: {scales::comma(sum(crude_yll$yll))} (without discounting or age weighting)"),
+    caption = "Data from ONS and NDTMS for deaths which occurred in 2022",
+    fill = NULL,
+    x = "Age group",
+    y = "YLL"
+       ) +
+  my_theme + my_fill_scale +
+  theme(
+    axis.text.x = element_text(angle = 30, vjust = 0.5),
+    legend.direction = "horizontal",
+    plot.caption = element_text(face = "italic")
+      )
+  
+return(p)
+  }
+
+plot_crude_yll_estimate()
+
+```
+### Plot discounted and weighted estimate
+
+Produces a similar plot for the discounted and age-weighted YLL estimate
+
+```{r function-plot_substance_use_yll_estimate}
+plot_substance_use_yll_estimate <-
+  function(){
+    source("R/dhsc_colour_palette.R")
+    source("R/themes.R")
+    
+    yll <-
+      calculate_substance_use_yll()
+    
+    yll |>
+      ggplot(aes(x = age_group, y = yll)) +
+      geom_col(aes(fill = substance), colour = "black") +
+      scale_y_continuous(labels = scales::comma) +
+      labs(
+        title = "Estimated years of life lost (YLL), due to substance use",
+        subtitle = glue::glue(
+          "Total YLL: {scales::comma(sum(yll$yll))} (with discounting and age weighting)"
+        ),
+        caption = "Data from ONS and NDTMS for deaths which occurred in 2022",
+        fill = NULL,
+        x = "Age group",
+        y = "YLL"
+      ) +
+      my_theme + my_fill_scale +
+      theme(
+        axis.text.x = element_text(angle = 30, vjust = 0.5),
+        legend.direction = "horizontal",
+        plot.caption = element_text(face = "italic")
+      )
+    
+  }
+
+plot_substance_use_yll_estimate() 
+
+```
+
+
 
 [^1]: Chudasama, Y.V., Khunti, K., Gillies, C.L., Dhalwani, N.N., Davies, M.J., Yates, T., & Zaccardi, F. (2022). Estimates of years of life lost depended on the method used: tutorial and comparative investigation. *Journal of Clinical Epidemiology*, 150, pp. 42–50. Available at: [https://doi.org/10.1016/j.jclinepi.2022.06.012](https://doi.org/10.1016/j.jclinepi.2022.06.012) [Accessed 6 Nov. 2024].
 

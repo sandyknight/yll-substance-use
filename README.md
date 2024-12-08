@@ -1,5 +1,9 @@
-## Required packages  
-```{r, warning=FALSE, message=FALSE}
+README
+================
+Sandy Knight
+2024-12-07
+
+``` r
 library(dplyr)
 library(ggplot2)
 library(janitor)
@@ -7,25 +11,39 @@ library(openxlsx)
 library(stringr)
 library(arrow)
 library(tidyr)
+library(glue)
+library(scales)
 ```
 
 ## Getting the data
 
-Each of these functions take no arguments and return a raw dataset when called.
+Each of these functions take no arguments and return a raw dataset when
+called.
 
 ### Drug poisoning data
 
-The ONS publishes drug poisonings and classifies them as "related to drug misuse" given certain criteria i.e. specific ICD-10 codes on the death record. 
+The ONS publishes drug poisonings and classifies them as “related to
+drug misuse” given certain criteria i.e. specific ICD-10 codes on the
+death record.
 
-The linkage of NDTMS and ONS data reveals that some deaths that had insufficient information for the ONS to apply this classification are probably related to drug misuse since they occured either in treatment or within a year of discharge. This analysis uses data from both sources to adjust the total number of deaths to include these additional deaths.
+The linkage of NDTMS and ONS data reveals that some deaths that had
+insufficient information for the ONS to apply this classification are
+probably related to drug misuse since they occured either in treatment
+or within a year of discharge. This analysis uses data from both sources
+to adjust the total number of deaths to include these additional deaths.
 
 The functions in this section load each of the raw datasets when called.
 
 ### NDTMS-ONS linked dataset deaths
 
-Drug poisoning deaths from the NDTMS-ONS data linkage. This function loads the required data from an Excel workbook received by email from EAT with the name `table1_all deaths_Cocaine version 1.xlsx`. Since loading data this large from Excel takes a long time it is saved as a parquet file to speed up later analysis. If this is already done the function does nothing. Note that this is not publicly available data.  
+Drug poisoning deaths from the NDTMS-ONS data linkage. This function
+loads the required data from an Excel workbook received by email from
+EAT with the name `table1_all deaths_Cocaine version 1.xlsx`. Since
+loading data this large from Excel takes a long time it is saved as a
+parquet file to speed up later analysis. If this is already done the
+function does nothing. Note that this is not publicly available data.
 
-```{r function-get_drug_deaths}
+``` r
 get_drug_poisoning_deaths <- function(){ 
 if (!file.exists("data/raw/ndtms_mortality_data.parquet")) {
   #  This file is NDTMS-ONS data linkage; received by email from Stefan and
@@ -46,9 +64,11 @@ if (!file.exists("data/raw/ndtms_mortality_data.parquet")) {
 
 ### ONS deaths related to drug poisoning
 
-The ONS drug poisoning data is publicly available at the URI in this function. This function downloads, reshapes, and returns the relevant ONS data.
+The ONS drug poisoning data is publicly available at the URI in this
+function. This function downloads, reshapes, and returns the relevant
+ONS data.
 
-```{r function-get_ons_drug_poisoning_data} 
+``` r
 get_ons_drug_poisoning_data  <- 
 function(){
 url <- "https://www.ons.gov.uk/file?uri=/peoplepopulationandcommunity/birthsdeathsandmarriages/deaths/datasets/deathsrelatedtodrugpoisoningenglandandwalesreferencetable/current/2023registrations.xlsx"
@@ -81,12 +101,17 @@ return(ons_registrations)
 
 ### Non-poisoning deaths of people with contact with the treatment system
 
-The NDTMS-ONS data linkage also has records for people who died in treatment or after treatment from causes other than drug poisoning. This analysis adds those deaths to either drug- or -alcohol related deaths depending on the cause and, in the case of those people in treatment for drug use, time since discharge. 
+The NDTMS-ONS data linkage also has records for people who died in
+treatment or after treatment from causes other than drug poisoning. This
+analysis adds those deaths to either drug- or -alcohol related deaths
+depending on the cause and, in the case of those people in treatment for
+drug use, time since discharge.
 
-The raw data was received by email from chioma.amasiatu@dhsc.gov.uk, 2024-07-08 and named `post election data for Jon- sent.xlsx`. This data is not publicly available.
+The raw data was received by email from <chioma.amasiatu@dhsc.gov.uk>,
+2024-07-08 and named `post election data for Jon- sent.xlsx`. This data
+is not publicly available.
 
-```{r, function-get_non_poisoning_deaths}
-
+``` r
 get_non_poisoning_deaths <- function(){
 np_deaths <- 
   openxlsx::read.xlsx("data/raw/post election data for Jon- sent.xlsx", sheet = "NDTMS_ONS") |> 
@@ -103,9 +128,11 @@ return(np_deaths )
 
 ### ONS alcohol-specific deaths
 
-The ONS alcohol-specific death data is publicly available at the URI in this function. This function downloads, reshapes, and returns the relevant ONS data.
+The ONS alcohol-specific death data is publicly available at the URI in
+this function. This function downloads, reshapes, and returns the
+relevant ONS data.
 
-```{r}
+``` r
 get_ons_alcohol_specific_death_data <- 
   function(){
     
@@ -128,9 +155,10 @@ return(alc_specific_deaths)
 
 ### Life expectancy
 
-This function downloads, re-labels, and reshapes the ONS life tables for use in the YLL analysis. 
+This function downloads, re-labels, and reshapes the ONS life tables for
+use in the YLL analysis.
 
-```{r function-get_life_tables}
+``` r
 get_life_tables <- function() {
     url <- "https://www.ons.gov.uk/file?uri=/peoplepopulationandcommunity/birthsdeathsandmarriages/lifeexpectancies/datasets/nationallifetablesunitedkingdomreferencetables/current/nltuk198020203.xlsx"
     
@@ -149,19 +177,20 @@ get_life_tables <- function() {
     
     return(life_tables)
 }
-
 ```
 
 ## Data processing and preparation
 
-The functions in this section take the output of functions from the previous section and return a processed data frame.
-
 ### Drug deaths
 
-The following two functions were written to allow other analyses of drug deaths and have more flexibilty (and therefore are unfortunately long and complicated) than is necessary for the YLL analysis. They should both take the output of the corresponding `get_*_data()` functions as the `data` argument. For this analysis we'll choose to group the data by age and sex, and use date of occurrence rater than registration. 
+The following two functions were written to allow other analyses of drug
+deaths and have more flexibilty (and therefore are unfortunately long
+and complicated) than is necessary for the YLL analysis. They should
+both take the output of the corresponding `get_*_data()` functions as
+the `data` argument. For this analysis we’ll choose to group the data by
+age and sex, and use date of occurrence rater than registration.
 
-```{r function-process_drug_poisoning_deaths}
-
+``` r
 #' Process drug poisoning data
 #' 
 #' Reads, cleans, and processes drug poisoning data from a file. Filters and groups the data 
@@ -258,8 +287,7 @@ process_poisoning_data <- function(data, date_of = "occurrence", years = c(2022,
 }
 ```
 
-```{r function-process_non_poisoning_deaths}
-
+``` r
 #' Process deaths in treatment data
 #' 
 #' Reads and processes data about deaths in treatment. Filters, groups, and summarizes the data
@@ -347,32 +375,30 @@ process_deaths_in_treatment <- function(data,
    
   return(result)
 }
-
 ```
 
 ### Alcohol deaths
 
-This function extracts:    
-1. alcohol-specific deaths in or after treatment and;
-2. deaths of people in treatment for alcohol use only
-from the output of `get_non_poisoning_deaths()`
+This function extracts:  
+1. alcohol-specific deaths in or after treatment and; 2. deaths of
+people in treatment for alcohol use only from the output of
+`get_non_poisoning_deaths()`
 
-```{r}
-
+``` r
 get_alcohol_specific_deaths_from_tx <- function(data){
 data |> 
   filter(drug_group == "alcohol only"|death_cause == "Alcohol-specific death") |> 
   filter(treatment_status != "Died one or more years following discharge")
   
 }
-
 ```
 
 ### Age group parsing
 
-These functions parse the age groups in the datasets that don't have single-year-of-age fields to allow merging.
+These functions parse the age groups in the datasets that don’t have
+single-year-of-age fields to allow merging.
 
-```{r function-parse_age_groups}
+``` r
 # Simplified parse_age_groups function
 parse_age_groups <- function(age_groups) {
   # Patterns for age group formats
@@ -415,11 +441,9 @@ parse_age_groups <- function(age_groups) {
     stringsAsFactors = FALSE
   )
 }
-
-
 ```
 
-```{r function-assign_age_group}
+``` r
 # Simplified assign_age_group function
 assign_age_group <- function(ages, age_df) {
   # We assume ages is already an integer vector
@@ -433,15 +457,11 @@ assign_age_group <- function(ages, age_df) {
   
   return(age_groups)
 }
-
-
-
 ```
-
 
 ## Data merging
 
-```{r function-merge_drug_deaths}
+``` r
 merge_drug_deaths <- function() {
   # Process and aggregate poisoning deaths by age and sex for the specified year
   poisoning_deaths_by_age <-
@@ -485,13 +505,9 @@ merge_drug_deaths <- function() {
   # Return the final aggregated data frame
   return(deaths_by_age)
 }
-
-
-
 ```
 
-```{r function-merge_alcohol_deaths}
-
+``` r
 merge_alcohol_deaths <- function() {
   # Get ONS alcohol-specific death data
   ons_alc_deaths <- get_ons_alcohol_specific_death_data()
@@ -533,17 +549,11 @@ merge_alcohol_deaths <- function() {
   # Return the final aggregated dataset
   return(alcohol_deaths)
 }
-
-
 ```
 
 ## Calculating years of life lost (YLL)
 
-The functions in this section use the previously defined functions to produce the final YLL outputs when called. They do not take any arguments. 
-
-### Crude YLL
-
-This function calculates the "crude" years of life lost. 
+This function calculates the “crude” years of life lost.
 
 The crude expected years of life lost is:
 
@@ -551,9 +561,12 @@ $$
 YLL = (D_{x})(e_{x}^s)
 $$
 
-Where $D_x$ is the number of deaths in the age group and $e_{x}^s$ is the mean standard age of death from the external life expectancy (the ONS life tables) for the age. This is the method used by the Global Burden of Disease Study (GBD) [^1].   
+Where $D_x$ is the number of deaths in the age group and $e_{x}^s$ is
+the mean standard age of death from the external life expectancy (the
+ONS life tables) for the age. This is the method used by the Global
+Burden of Disease Study (GBD) [^1].
 
-```{r function-calculate_crude_yll}
+``` r
 calculate_crude_yll <- function() {
   # Step 1: Merge alcohol-related deaths into a single dataset
   alcohol_deaths <- merge_alcohol_deaths()
@@ -612,11 +625,12 @@ calculate_crude_yll <- function() {
   # Step 11: Return the combined dataset
   return(yll)
 }
-
 ```
-### YLL with weighting and discounting
 
-This function is from [here](https://static-content.springer.com/esm/art%3A10.1186%2F1471-2458-8-116/MediaObjects/12889_2007_1086_MOESM3_ESM.pdf)[^2]. It uses the same basic method but applies discounting and age-weighting according to parameters calibrated and chosen in the GBD. 
+This function is from
+[here](https://static-content.springer.com/esm/art%3A10.1186%2F1471-2458-8-116/MediaObjects/12889_2007_1086_MOESM3_ESM.pdf)[^2].
+It uses the same basic method but applies discounting and age-weighting
+according to parameters calibrated and chosen in the GBD.
 
 The formula is:
 
@@ -624,8 +638,7 @@ $$
 Y_x = d_x \left[ \frac{KCe^{r(n^a_x)}}{(r+\beta)^2} \left( e^{z[-(r+\beta)(e^s_x + a_x) - 1]} - e^{-(r+\beta)a_x[-(r+\beta)a_x - 1]} \right) + \frac{1-K}{r} (1 - e^{r(e^s_x)}) \right]
 $$
 
-```{r function-calculate_yll}
-
+``` r
 calculate_yll <-
   function(number.deaths,
            average.age.death,
@@ -649,12 +662,12 @@ calculate_yll <-
       N * (K * ((CC * exp(r * a)) / (-(r + b)^2)) * ((exp(-(r + b) * (L + a)) * (-(r + b) * (L + a) - 1)) - (exp(-(r + b) * a) * (-(r + b) * a - 1))) + ((1 - K) / r) * ((1 - exp(-r * L))))
     }
   }
-
 ```
 
-This function uses the `calculate_yll` function to estimate the total YLL for drug and alcohol use with discounting and age weighting. 
+This function uses the `calculate_yll` function to estimate the total
+YLL for drug and alcohol use with discounting and age weighting.
 
-```{r function-calculate_substance_use_yll}
+``` r
 calculate_substance_use_yll <- function() {
   # Merge and summarise alcohol-related deaths by age group and sex
   alcohol_deaths <- 
@@ -664,6 +677,9 @@ calculate_substance_use_yll <- function() {
   age_df <- 
     parse_age_groups(unique(pull(alcohol_deaths, age_group)))
 
+  # Load life tables
+  life_tables <- 
+    get_life_tables()
   # Incorporate age groups into life tables, then compute average age and life expectancy (ex) for each age group and sex
   life_tables <-
     life_tables |>
@@ -706,9 +722,103 @@ calculate_substance_use_yll <- function() {
   # Return the final data frame containing combined YLL estimates for both alcohol and drug substances
   return(substance_use_yll)
 }
-
 ```
 
-[^1]: Chudasama, Y.V., Khunti, K., Gillies, C.L., Dhalwani, N.N., Davies, M.J., Yates, T., & Zaccardi, F. (2022). Estimates of years of life lost depended on the method used: tutorial and comparative investigation. *Journal of Clinical Epidemiology*, 150, pp. 42–50. Available at: [https://doi.org/10.1016/j.jclinepi.2022.06.012](https://doi.org/10.1016/j.jclinepi.2022.06.012) [Accessed 6 Nov. 2024].
+## Plotting results
 
-[^2]:Aragón, T.J., Lichtensztajn, D.Y., Katcher, B.S., Reiter, R. and Katz, M.H., 2007. Calculating Expected Years of Life Lost to Rank the Leading Causes of Premature Death in San Francisco. *San Francisco Department of Public Health*.
+### Plot crude estimate
+
+Produces a plot of the crude YLL estimate. Sources two scripts that
+define `ggplot2` aesthetics but don’t contibute to the analysis.
+
+``` r
+plot_crude_yll_estimate <- 
+  function(){
+source("R/dhsc_colour_palette.R")
+source("R/themes.R")
+crude_yll <-
+  calculate_crude_yll()
+
+p <- 
+crude_yll  |> 
+  ggplot(aes(x = age_group, y = yll)) +
+  geom_col(aes(fill = substance), colour = "black") +
+  scale_y_continuous(labels = scales::comma) +
+  labs(
+    title = "Estimated years of life lost (YLL), due to substance use",
+    subtitle = glue::glue("Total YLL: {scales::comma(sum(crude_yll$yll))} (without discounting or age weighting)"),
+    caption = "Data from ONS and NDTMS for deaths which occurred in 2022",
+    fill = NULL,
+    x = "Age group",
+    y = "YLL"
+       ) +
+  my_theme + my_fill_scale +
+  theme(
+    axis.text.x = element_text(angle = 30, vjust = 0.5),
+    legend.direction = "horizontal",
+    plot.caption = element_text(face = "italic")
+      )
+  
+return(p)
+  }
+
+plot_crude_yll_estimate()
+```
+
+![](README_files/figure-gfm/function-plot_crude_yll_estimate-1.png)<!-- -->
+
+### Plot discounted and weighted estimate
+
+Produces a similar plot for the discounted and age-weighted YLL estimate
+
+``` r
+plot_substance_use_yll_estimate <-
+  function(){
+    source("R/dhsc_colour_palette.R")
+    source("R/themes.R")
+    
+    yll <-
+      calculate_substance_use_yll()
+    
+    yll |>
+      ggplot(aes(x = age_group, y = yll)) +
+      geom_col(aes(fill = substance), colour = "black") +
+      scale_y_continuous(labels = scales::comma) +
+      labs(
+        title = "Estimated years of life lost (YLL), due to substance use",
+        subtitle = glue::glue(
+          "Total YLL: {scales::comma(sum(yll$yll))} (with discounting and age weighting)"
+        ),
+        caption = "Data from ONS and NDTMS for deaths which occurred in 2022",
+        fill = NULL,
+        x = "Age group",
+        y = "YLL"
+      ) +
+      my_theme + my_fill_scale +
+      theme(
+        axis.text.x = element_text(angle = 30, vjust = 0.5),
+        legend.direction = "horizontal",
+        plot.caption = element_text(face = "italic")
+      )
+    
+  }
+
+plot_substance_use_yll_estimate() 
+```
+
+    ## Joining with `by = join_by(sex, age_group)`
+    ## Joining with `by = join_by(age, sex)`
+
+![](README_files/figure-gfm/function-plot_substance_use_yll_estimate-1.png)<!-- -->
+
+[^1]: Chudasama, Y.V., Khunti, K., Gillies, C.L., Dhalwani, N.N.,
+    Davies, M.J., Yates, T., & Zaccardi, F. (2022). Estimates of years
+    of life lost depended on the method used: tutorial and comparative
+    investigation. *Journal of Clinical Epidemiology*, 150, pp. 42–50.
+    Available at: <https://doi.org/10.1016/j.jclinepi.2022.06.012>
+    \[Accessed 6 Nov. 2024\].
+
+[^2]: Aragón, T.J., Lichtensztajn, D.Y., Katcher, B.S., Reiter, R. and
+    Katz, M.H., 2007. Calculating Expected Years of Life Lost to Rank
+    the Leading Causes of Premature Death in San Francisco. *San
+    Francisco Department of Public Health*.

@@ -51,9 +51,6 @@ po/*~
 # RStudio Connect folder
 rsconnect/
 
-# Plots folder
-plots/
-
 # Data folder
 data/
 
