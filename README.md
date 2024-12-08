@@ -618,6 +618,14 @@ calculate_crude_yll <- function() {
 
 This function is from [here](https://static-content.springer.com/esm/art%3A10.1186%2F1471-2458-8-116/MediaObjects/12889_2007_1086_MOESM3_ESM.pdf)[^2]. It uses the same basic method but applies discounting and age-weighting according to parameters calibrated and chosen in the GBD. 
 
+The formula is:
+
+$$
+Y_x = d_x \left[ \frac{KCe^{r(n^a_x)}}{(r+\beta)^2} 
+\left( e^{z[-(r+\beta)(e^s_x + a_x) - 1]} - e^{-(r+\beta)a_x[-(r+\beta)a_x - 1]} \right) 
++ \frac{1-K}{r} (1 - e^{r(e^s_x)}) \right]
+$$
+
 ```{r function-calculate_yll}
 
 calculate_yll <-
