@@ -168,7 +168,7 @@ get_life_tables <- function() {
 
 ### Drug deaths
 
-The following two functions were written to allow other analyses of drug deaths and have more flexibilty (and therefore are unfortunately long and complicated) than is necessary for the YLL analysis. They should both take the output of the corresponding `get_*_data()` functions as the `data` argument. 
+The following two functions were written to allow other analyses of drug deaths and have more flexibilty (and therefore are unfortunately long and complicated) than is necessary for the YLL analysis. They should both take the output of the corresponding `get_*_data()` functions as the `data` argument. For this analysis we'll choose to group the data by age and sex, and use date of occurrence rater than registration. 
 
 ```{r function-process_drug_poisoning_deaths}
 
@@ -362,7 +362,10 @@ process_deaths_in_treatment <- function(data,
 
 ### Alcohol deaths
 
-This function extracts alcohol-specific deaths in or after treatment from the output of `get_non_poisoning_deaths()`
+This function extracts:    
+1. alcohol-specific deaths in or after treatment and;
+2. deaths of people in treatment for alcohol use only
+from the output of `get_non_poisoning_deaths()`
 
 ```{r}
 
@@ -380,61 +383,68 @@ data |>
 These functions parse the age groups in the datasets that don't have single-year-of-age fields to allow merging.
 
 ```{r function-parse_age_groups}
+# Simplified parse_age_groups function
 parse_age_groups <- function(age_groups) {
-  parse_age_group <- function(s) {
-    if (grepl("-", s)) {
-      bounds <- as.numeric(strsplit(s, "-")[[1]])
-      lower <- bounds[1]
-      upper <- bounds[2] + 0.9999  # Adjust upper bound slightly
-    } else if (grepl("^<", s)) {
-      upper <- as.numeric(sub("^<", "", s))
-      lower <- -Inf
-    } else if (grepl("\\+$", s)) {
-      lower <- as.numeric(sub("\\+$", "", s))
-      upper <- Inf
-    } else {
-      stop("Unrecognized format: ", s)
-    }
-    return(list(lower = lower, upper = upper))
+  # Patterns for age group formats
+  pattern_range <- "^([0-9]+)-([0-9]+)$"
+  pattern_under <- "^<([0-9]+)$"
+  pattern_over  <- "^([0-9]+)\\+$"
+  
+  # Initialize vectors
+  lower <- rep(NA_real_, length(age_groups))
+  upper <- rep(NA_real_, length(age_groups))
+  
+  # Identify which pattern each age group matches
+  is_range <- grepl(pattern_range, age_groups)
+  is_under <- grepl(pattern_under, age_groups)
+  is_over  <- grepl(pattern_over, age_groups)
+  
+  # For range: extract lower and upper numbers 
+  if (any(is_range)) {
+    lower[is_range] <- as.numeric(sub(pattern_range, "\\1", age_groups[is_range]))
+    upper[is_range] <- as.numeric(sub(pattern_range, "\\2", age_groups[is_range])) 
   }
   
-  # Parse each age group
-  bounds_list <- lapply(age_groups, parse_age_group)
+  # For under: "<X" means lower = -Inf, upper = X
+  if (any(is_under)) {
+    upper[is_under] <- as.numeric(sub(pattern_under, "\\1", age_groups[is_under]))
+    lower[is_under] <- -Inf
+  }
   
-  # Create a data frame with age groups and their bounds
-  age_df <- data.frame(
+  # For over: "X+" means lower = X, upper = Inf
+  if (any(is_over)) {
+    lower[is_over] <- as.numeric(sub(pattern_over, "\\1", age_groups[is_over]))
+    upper[is_over] <- Inf
+  }
+  
+  # Create and return a data frame
+  data.frame(
     age_group = age_groups,
-    lower = sapply(bounds_list, function(x) x$lower),
-    upper = sapply(bounds_list, function(x) x$upper)
+    lower = lower,
+    upper = upper,
+    stringsAsFactors = FALSE
   )
-  
-  return(age_df)
 }
+
+
 ```
 
 ```{r function-assign_age_group}
+# Simplified assign_age_group function
 assign_age_group <- function(ages, age_df) {
-  # Initialize a vector to store age groups
-  age_groups <- rep(NA, length(ages))
+  # We assume ages is already an integer vector
+  age_groups <- character(length(ages))
   
-  # Convert ages to numeric vector
-  ages <- as.numeric(ages)
-  
-  # Loop over age intervals
+  # Assign age groups based on intervals
   for (i in seq_len(nrow(age_df))) {
-    lower <- age_df$lower[i]
-    upper <- age_df$upper[i]
-    
-    # Modify comparison to include the upper bound
-    in_interval <- (is.infinite(lower) | ages >= lower) &
-      (is.infinite(upper) | ages <= upper)
-    
-    # Assign the age group label to matching ages
+    in_interval <- ages >= age_df$lower[i] & ages <= age_df$upper[i]
     age_groups[in_interval] <- age_df$age_group[i]
   }
   
   return(age_groups)
 }
+
+
 
 ```
 
@@ -446,7 +456,7 @@ merge_drug_deaths <- function(){
 poisoning_deaths_by_age <-
   process_poisoning_data(
   data = get_drug_poisoning_deaths(),
-  date_of = "occurrence",
+  date_of = "occurrence", # Date of occurrence of death, not registration
   years = 2022,
   by = "age",
   by_sex = TRUE
@@ -478,17 +488,86 @@ deaths_by_age <-
     non_poisoning_deaths_by_age
   ) |>
   group_by(age, sex) |>
-  summarise(count = sum(count), .groups = "drop")
-
-deaths_by_age  <- 
-deaths_by_age |> 
-  mutate(age_group = assign_age_group(ages = pull(deaths_by_age, age), age_df = age_df)) |> 
-  group_by(sex, age_group) |> 
-  summarise(count = sum(count), .groups = "drop")
-
+  summarise(count = sum(count), .groups = "drop") |> 
+  mutate(substance = "Drugs")
 
 return(deaths_by_age)
 
 }
 
 ```
+
+This function calculates the "crude" years of life lost. 
+
+The crude expected years of life lost is:
+
+$$
+YLL = (D_{x})(e_{x}^s)
+$$
+
+Where $D_x$ is the number of deaths in the age group and $e_{x}^s$ is the mean standard age of death from the external life expectancy (the ONS life tables) for the age. This is the method used by the Global Burden of Disease Study (GBD) [1^].
+
+```{r function-calculate_crude_yll}
+calculate_crude_yll <- function() {
+  # Step 1: Merge alcohol-related deaths into a single dataset
+  alcohol_deaths <- merge_alcohol_deaths()
+  
+  # Step 2: Parse the age groups in the alcohol deaths data to get lower and upper bounds
+  age_df <- parse_age_groups(pull(alcohol_deaths, age_group))
+  
+  # Step 3: Retrieve life tables, which contain life expectancy (ex) by sex and age
+  life_tables <- get_life_tables()
+  
+  # Step 4: Calculate years of life lost (YLL) for alcohol-related deaths
+  yll_alcohol <- 
+    life_tables |> 
+    # Assign each age in life tables to an age group based on parsed age group bounds
+    mutate(age_group = assign_age_group(ages = age, age_df)) |> 
+    # Group by sex and age group and calculate the average life expectancy (ex)
+    group_by(sex, age_group) |> 
+    summarise(ex = mean(ex), .groups = "drop") |> 
+    # Merge with alcohol deaths data to match life expectancy with death counts
+    right_join(alcohol_deaths, by = c("sex", "age_group")) |> 
+    # Calculate YLL by multiplying life expectancy (ex) with the number of deaths (count)
+    mutate(yll = ex * count) 
+  
+  # Step 5: Summarise alcohol-related YLL and death counts by age group and substance
+  yll_alcohol <- 
+    yll_alcohol |> 
+    group_by(age_group, substance) |> 
+    summarise(count = sum(count), yll = sum(yll), .groups = "drop")
+  
+  # Step 6: Merge drug-related deaths into a single dataset
+  drug_deaths <- merge_drug_deaths()
+  
+  # Step 7: Calculate YLL for drug-related deaths
+  yll_drugs <- 
+    left_join(
+      drug_deaths,  # Join drug deaths data
+      life_tables,  # With life tables to get life expectancy (ex) by sex and age
+      by = c("sex", "age")
+    ) |> 
+    # Calculate YLL by multiplying life expectancy (ex) with the number of deaths (count)
+    mutate(yll = count * ex)
+  
+  # Step 8: Re-parse the age groups in the summarised alcohol YLL data
+  age_df <- parse_age_groups(pull(yll_alcohol, age_group))
+  
+  # Step 9: Assign each age in drug YLL data to an age group based on parsed age group bounds
+  yll_drugs <- 
+    mutate(yll_drugs, age_group = assign_age_group(age, age_df)) |> 
+    # Summarise drug-related YLL and death counts by age group and substance
+    group_by(age_group, substance) |> 
+    summarise(count = sum(count), yll = sum(yll), .groups = "drop")
+  
+  # Step 10: Combine alcohol-related and drug-related YLL into a single dataset
+  yll <- bind_rows(yll_alcohol, yll_drugs)
+  
+  # Step 11: Return the combined dataset
+  return(yll)
+}
+
+```
+
+
+[^1]: Chudasama, Y.V., Khunti, K., Gillies, C.L., Dhalwani, N.N., Davies, M.J., Yates, T., & Zaccardi, F. (2022). Estimates of years of life lost depended on the method used: tutorial and comparative investigation. *Journal of Clinical Epidemiology*, 150, pp. 42–50. Available at: [https://doi.org/10.1016/j.jclinepi.2022.06.012](https://doi.org/10.1016/j.jclinepi.2022.06.012) [Accessed 6 Nov. 2024].

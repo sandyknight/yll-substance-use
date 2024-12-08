@@ -1509,7 +1509,8 @@ library(ggplot2)
 library(janitor)
 library(openxlsx)
 library(stringr)
-library(arrow)</code></pre>
+library(arrow)
+library(tidyr)</code></pre>
 <div id="getting-the-data" class="section level2">
 <h2>Getting the data</h2>
 <p>Each of these functions take no arguments and return a raw dataset
@@ -1596,7 +1597,7 @@ treatment or after treatment from causes other than drug poisoning. This
 analysis adds those deaths to either drug- or -alcohol related deaths
 depending on the cause and, in the case of those people in treatment for
 drug use, time since discharge.</p>
-<p>The raw data was received by email from <a href="mailto:Chioma.Amasiatu@dhsc.gov.uk" class="email">Chioma.Amasiatu@dhsc.gov.uk</a>, Mon 08/07/2024 and named
+<p>The raw data was received by email from <a href="mailto:chioma.amasiatu@dhsc.gov.uk" class="email">chioma.amasiatu@dhsc.gov.uk</a>, 2024-07-08 and named
 <code>post election data for Jon- sent.xlsx</code>. This data is not
 publicly available.</p>
 <pre class="r"><code>get_non_poisoning_deaths &lt;- function(){
@@ -1619,32 +1620,42 @@ in this function. This function downloads, reshapes, and returns the
 relevant ONS data.</p>
 <pre class="r"><code>get_ons_alcohol_specific_death_data &lt;- 
   function(){
+    
 url &lt;- 
-  &quot;https://www.ons.gov.uk/file?uri=/peoplepopulationandcommunity/birthsdeathsandmarriages/deaths/datasets/alcoholspecificdeathsintheuk/current/alcoholspecificdeaths2022.xlsx&quot;
+  &quot;https://www.ons.gov.uk/file?uri=/peoplepopulationandcommunity/healthandsocialcare/causesofdeath/datasets/alcoholspecificdeathsbysexagegroupandindividualcauseofdeath/current/deathsbyindividualcause.xlsx&quot;
 
+alc_specific_deaths &lt;- 
 read.xlsx(
-  xlsxFile = url, rows = 6, cols = 4,colNames = FALSE, sheet = &quot;Table_2&quot;) |&gt;
-  `colnames&lt;-`(&quot;alcohol_specific_deaths_eng_2022&quot;)
-
+  xlsxFile = url, rows = c(5:50), cols = c(1:24),colNames = TRUE, sheet = &quot;Table 2&quot;) %&gt;% 
+  rename_with(.fn = janitor::make_clean_names, .cols = 1:4)  |&gt; 
+  rename(&quot;period&quot; = year_note_3) %&gt;% 
+  filter(sex != &quot;Persons&quot;) |&gt; 
+  tidyr::pivot_longer(cols = `&lt;1`:`90+`, names_to = &quot;age_group&quot;, values_to = &quot;count&quot;) |&gt; 
+  group_by(sex, age_group) |&gt; 
+  summarise(count = sum(count), .groups = &quot;drop&quot;)
+ 
+return(alc_specific_deaths)
 }</code></pre>
 </div>
 <div id="life-expectancy" class="section level3">
 <h3>Life expectancy</h3>
-<p>This function downloads, relabels, and reshapes the ONS life tables
+<p>This function downloads, re-labels, and reshapes the ONS life tables
 for use in the YLL analysis.</p>
 <pre class="r"><code>get_life_tables &lt;- function() {
     url &lt;- &quot;https://www.ons.gov.uk/file?uri=/peoplepopulationandcommunity/birthsdeathsandmarriages/lifeexpectancies/datasets/nationallifetablesunitedkingdomreferencetables/current/nltuk198020203.xlsx&quot;
     
-    life_tables &lt;- read.xlsx(
-      xlsxFile = url,
-      sheet = &quot;2020-2022&quot;,
-      startRow = 6
-    ) |&gt;
-      rename_with(.cols = 1:6, ~paste0(.x, &quot;_male&quot;)) |&gt;
-      rename_with(.cols = 7:12, ~paste0(.x, &quot;_female&quot;)) |&gt;
-      select(age_male, ex_male, age_female, ex_female) |&gt;
-      pivot_longer(cols = contains(&quot;age&quot;), values_to = &quot;age&quot;, names_to = &quot;sex&quot;) |&gt;
-      mutate(sex = str_remove(sex, &quot;age_&quot;))
+    life_tables &lt;- 
+        read.xlsx(
+        xlsxFile = url,
+        sheet = &quot;2020-2022&quot;,
+        startRow = 6
+      ) |&gt;
+        rename_with(.cols = 1:6, ~paste0(.x, &quot;_male&quot;)) |&gt;
+        rename_with(.cols = 7:12, ~paste0(.x, &quot;_female&quot;)) |&gt;
+        select(ex_male, age_female, ex_female) |&gt;
+        pivot_longer(cols = contains(&quot;ex&quot;), values_to = &quot;ex&quot;, names_to = &quot;sex&quot;) |&gt;
+        mutate(sex = str_remove(sex, &quot;ex_&quot;)) |&gt; 
+        rename(&quot;age&quot; = age_female)
     
     return(life_tables)
 }</code></pre>
@@ -1910,6 +1921,57 @@ single-year-of-age fields to allow merging.</p>
   return(age_groups)
 }</code></pre>
 </div>
+</div>
+<div id="data-merging" class="section level2">
+<h2>Data merging</h2>
+<pre class="r"><code>merge_drug_deaths &lt;- function(){
+poisoning_deaths_by_age &lt;-
+  process_poisoning_data(
+  data = get_drug_poisoning_deaths(),
+  date_of = &quot;occurrence&quot;,
+  years = 2022,
+  by = &quot;age&quot;,
+  by_sex = TRUE
+) |&gt; 
+  rename(&quot;age&quot; = ageinyrs) |&gt; 
+  group_by(age, sex) |&gt; 
+  summarise(count = sum(count), .groups = &quot;drop&quot;) 
+
+
+non_poisoning_deaths_by_age &lt;-
+  process_deaths_in_treatment(
+  data = get_non_poisoning_deaths(),
+  years = 2022,
+  by = &quot;age&quot;,
+  exclude_poisoning = TRUE,
+  by_treatment_status = TRUE,
+  by_death_cause = FALSE,
+  by_sex = TRUE,
+  exclude_alcohol_specific_deaths = TRUE
+) |&gt;
+  filter(treatment_status != &quot;Died one or more years following discharge&quot;) |&gt; 
+  group_by(age, sex) |&gt; 
+  summarise(count = sum(count), .groups = &quot;drop&quot;)
+
+
+deaths_by_age &lt;-
+  bind_rows(
+    poisoning_deaths_by_age,
+    non_poisoning_deaths_by_age
+  ) |&gt;
+  group_by(age, sex) |&gt;
+  summarise(count = sum(count), .groups = &quot;drop&quot;)
+
+deaths_by_age  &lt;- 
+deaths_by_age |&gt; 
+  mutate(age_group = assign_age_group(ages = pull(deaths_by_age, age), age_df = age_df)) |&gt; 
+  group_by(sex, age_group) |&gt; 
+  summarise(count = sum(count), .groups = &quot;drop&quot;)
+
+
+return(deaths_by_age)
+
+}</code></pre>
 </div>
 
 
