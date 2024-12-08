@@ -2,12 +2,6 @@
 title: "yll-substance-misuse"
 author: "Sandy Knight"
 date: "2024-12-07"
-output: 
-  html_document:
-    theme: darkly
-    toc: yes
-    toc_float:
-      collapsed: true
 ---
 
 
