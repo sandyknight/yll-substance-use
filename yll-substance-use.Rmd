@@ -637,6 +637,57 @@ calculate_yll <-
 
 ```
 
+This function uses the `calculate_yll` function to estimate the total YLL for drug and alcohol use with discounting and age weighting. 
+
+```{r function-calculate_substance_use_yll}
+calculate_substance_use_yll <- function(){
+alcohol_deaths <-
+  merge_alcohol_deaths()
+
+age_df <-
+  parse_age_groups(unique(pull(alcohol_deaths, age_group)))
+
+life_tables <-
+life_tables |>
+  mutate(age_group = assign_age_group(ages = pull(life_tables, age), age_df = age_df)) |>
+  group_by(sex, age_group) |>
+  summarise(mean_age = mean(age), ex = mean(ex), .groups = "drop")
+
+alcohol_yll <-
+left_join(alcohol_deaths, life_tables) |>
+  mutate(yll = calculate_yll(number.deaths = count, average.age.death = mean_age, model.life.expectancy = ex)) |>
+  group_by(age_group, substance) |>
+  summarise(count = sum(count), yll = sum(yll), .groups = "drop")
+
+
+drug_deaths <-
+  merge_drug_deaths()
+
+life_tables <-
+  get_life_tables()
+
+yll <-
+  left_join(drug_deaths, life_tables)
+
+drugs_yll <-
+  yll |>
+  mutate(yll = calculate_yll(number.deaths = count, average.age.death = age, model.life.expectancy = ex))
+
+drugs_yll <-
+drugs_yll |>
+  mutate(age_group = assign_age_group(ages = age, age_df)) |>
+  group_by(age_group, substance) |>
+  summarise(count = sum(count), yll = sum(yll), .groups = "drop")
+
+
+substance_use_yll <-
+  bind_rows(alcohol_yll, drugs_yll)
+
+return(substance_use_yll)
+
+}
+```
+
 [^1]: Chudasama, Y.V., Khunti, K., Gillies, C.L., Dhalwani, N.N., Davies, M.J., Yates, T., & Zaccardi, F. (2022). Estimates of years of life lost depended on the method used: tutorial and comparative investigation. *Journal of Clinical Epidemiology*, 150, pp. 42–50. Available at: [https://doi.org/10.1016/j.jclinepi.2022.06.012](https://doi.org/10.1016/j.jclinepi.2022.06.012) [Accessed 6 Nov. 2024].
 
 [^2]:Aragón, T.J., Lichtensztajn, D.Y., Katcher, B.S., Reiter, R. and Katz, M.H., 2007. Calculating Expected Years of Life Lost to Rank the Leading Causes of Premature Death in San Francisco. *San Francisco Department of Public Health*.
