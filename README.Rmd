@@ -19,6 +19,17 @@ library(glue)
 library(scales)
 ```
 
+## Set-up
+
+Two of the datasets used in the analysis aren't publicly available, so I've not uploaded the `data `directory here. To get the analysis working you'll have to add the two original data files with this structure:
+
+├── data
+│   └── raw
+│       ├── `post election data for Jon- sent.xlsx`
+│       └── `table1_all deaths_Cocaine version 1.xlsx`
+
+I've included the session info with R and package versions at the end to help with any compatability issues.
+
 ## Getting the data
 
 Each of these functions take no arguments and return a raw dataset when called.
@@ -811,3 +822,7 @@ plot_substance_use_yll_estimate()
 [^1]: Chudasama, Y.V., Khunti, K., Gillies, C.L., Dhalwani, N.N., Davies, M.J., Yates, T., & Zaccardi, F. (2022). Estimates of years of life lost depended on the method used: tutorial and comparative investigation. *Journal of Clinical Epidemiology*, 150, pp. 42–50. Available at: [https://doi.org/10.1016/j.jclinepi.2022.06.012](https://doi.org/10.1016/j.jclinepi.2022.06.012) [Accessed 6 Nov. 2024].
 
 [^2]:Aragón, T.J., Lichtensztajn, D.Y., Katcher, B.S., Reiter, R. and Katz, M.H., 2007. Calculating Expected Years of Life Lost to Rank the Leading Causes of Premature Death in San Francisco. *San Francisco Department of Public Health*.
+
+```{r}
+sessionInfo()
+```
