@@ -607,5 +607,36 @@ calculate_crude_yll <- function() {
 
 ```
 
+This function is from [here](https://static-content.springer.com/esm/art%3A10.1186%2F1471-2458-8-116/MediaObjects/12889_2007_1086_MOESM3_ESM.pdf)[^2]. It uses the same basic method but applies discounting and age-weighting according to parameters calibrated and chosen in the GBD. 
+
+```{r function-calculate_yll}
+
+calculate_yll <-
+  function(number.deaths,
+           average.age.death,
+           model.life.expectancy,
+           discount.rate = 0.03,
+           beta.constant = 0.04,
+           modulation.constant = 0,
+           adjustment.constant = 0.1658) {
+    ## abbreviate inputs
+    N <- number.deaths
+    a <- average.age.death
+    L <- model.life.expectancy
+    r <- discount.rate
+    b <- beta.constant
+    K <- modulation.constant
+    CC <- adjustment.constant
+    ## do calculations
+    if (discount.rate == 0) {
+      N * (K * CC * ((exp(-b * a)) / b^2) * ((exp(-b * L)) * (-b * (L + a) - 1) - (-b * a - 1)) + ((1 - K) * L))
+    } else {
+      N * (K * ((CC * exp(r * a)) / (-(r + b)^2)) * ((exp(-(r + b) * (L + a)) * (-(r + b) * (L + a) - 1)) - (exp(-(r + b) * a) * (-(r + b) * a - 1))) + ((1 - K) / r) * ((1 - exp(-r * L))))
+    }
+  }
+
+```
 
 [^1]: Chudasama, Y.V., Khunti, K., Gillies, C.L., Dhalwani, N.N., Davies, M.J., Yates, T., & Zaccardi, F. (2022). Estimates of years of life lost depended on the method used: tutorial and comparative investigation. *Journal of Clinical Epidemiology*, 150, pp. 42–50. Available at: [https://doi.org/10.1016/j.jclinepi.2022.06.012](https://doi.org/10.1016/j.jclinepi.2022.06.012) [Accessed 6 Nov. 2024].
+
+[^2]:Aragón, T.J., Lichtensztajn, D.Y., Katcher, B.S., Reiter, R. and Katz, M.H., 2007. Calculating Expected Years of Life Lost to Rank the Leading Causes of Premature Death in San Francisco. *San Francisco Department of Public Health*.
