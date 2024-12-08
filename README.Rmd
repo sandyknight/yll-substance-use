@@ -22,11 +22,12 @@ library(scales)
 ## Set-up
 
 Two of the datasets used in the analysis aren't publicly available, so I've not uploaded the `data `directory here. To get the analysis working you'll have to add the two original data files with this structure:
-
+```
 ├── data
 │   └── raw
-│       ├── `post election data for Jon- sent.xlsx`
-│       └── `table1_all deaths_Cocaine version 1.xlsx`
+│       ├── post election data for Jon- sent.xlsx
+│       └── table1_all deaths_Cocaine version 1.xlsx
+```
 
 I've included the session info with R and package versions at the end to help with any compatability issues.
 

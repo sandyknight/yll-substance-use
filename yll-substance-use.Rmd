@@ -24,6 +24,9 @@ library(glue)
 library(scales)
 ```
 
+
+
+
 ## Getting the data
 
 Each of these functions take no arguments and return a raw dataset when called.
