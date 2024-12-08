@@ -3,6 +3,8 @@ README
 Sandy Knight
 2024-12-07
 
+## Required packages
+
 ``` r
 library(dplyr)
 library(ggplot2)
@@ -14,6 +16,18 @@ library(tidyr)
 library(glue)
 library(scales)
 ```
+
+## Set-up
+
+Two of the datasets used in the analysis aren’t publicly available, so
+I’ve not uploaded the `data`directory here. To get the analysis working
+you’ll have to add the two original data files with this structure:
+
+├── data │ └── raw │ ├── `post election data for Jon- sent.xlsx` │ └──
+`table1_all deaths_Cocaine version 1.xlsx`
+
+I’ve included the session info with R and package versions at the end to
+help with any compatability issues.
 
 ## Getting the data
 
@@ -107,9 +121,9 @@ analysis adds those deaths to either drug- or -alcohol related deaths
 depending on the cause and, in the case of those people in treatment for
 drug use, time since discharge.
 
-The raw data was received by email from <chioma.amasiatu@dhsc.gov.uk>,
-2024-07-08 and named `post election data for Jon- sent.xlsx`. This data
-is not publicly available.
+The treatment mortality data was received by email from EAT,(*received:
+2024-07-08 from CA*) and named `post election data for Jon- sent.xlsx`.
+This data is not publicly available.
 
 ``` r
 get_non_poisoning_deaths <- function(){
@@ -636,7 +650,10 @@ The formula is:
 
 $$
 Y_x = d_x \left[ \frac{KCe^{r(n^a_x)}}{(r+\beta)^2} \left( e^{z[-(r+\beta)(e^s_x + a_x) - 1]} - e^{-(r+\beta)a_x[-(r+\beta)a_x - 1]} \right) + \frac{1-K}{r} (1 - e^{r(e^s_x)}) \right]
-$$
+$$ where: 𝑎 = age of death (years) 𝑟 = discount rate (usually 3%) 𝛽 =
+age weighting constant (usually 𝛽=0.04) 𝐾 = age-weighting modulation
+constant (usually 𝐾=1) 𝐶 = adjustment constant for age-weights (usually
+𝐶=0.1658) 𝑒 = standard life expectancy at age of death (years)
 
 ``` r
 calculate_yll <-
@@ -810,6 +827,48 @@ plot_substance_use_yll_estimate()
     ## Joining with `by = join_by(age, sex)`
 
 ![](README_files/figure-gfm/function-plot_substance_use_yll_estimate-1.png)<!-- -->
+
+``` r
+sessionInfo()
+```
+
+    ## R version 4.4.2 (2024-10-31 ucrt)
+    ## Platform: x86_64-w64-mingw32/x64
+    ## Running under: Windows 10 x64 (build 19045)
+    ## 
+    ## Matrix products: default
+    ## 
+    ## 
+    ## locale:
+    ## [1] LC_COLLATE=English_United Kingdom.utf8 
+    ## [2] LC_CTYPE=English_United Kingdom.utf8   
+    ## [3] LC_MONETARY=English_United Kingdom.utf8
+    ## [4] LC_NUMERIC=C                           
+    ## [5] LC_TIME=English_United Kingdom.utf8    
+    ## 
+    ## time zone: Europe/London
+    ## tzcode source: internal
+    ## 
+    ## attached base packages:
+    ## [1] stats     graphics  grDevices utils     datasets  methods   base     
+    ## 
+    ## other attached packages:
+    ## [1] scales_1.3.0     glue_1.8.0       tidyr_1.3.1      arrow_17.0.0.1  
+    ## [5] stringr_1.5.1    openxlsx_4.2.7.1 janitor_2.2.0    ggplot2_3.5.1   
+    ## [9] dplyr_1.1.4     
+    ## 
+    ## loaded via a namespace (and not attached):
+    ##  [1] bit_4.5.0         gtable_0.3.6      compiler_4.4.2    tidyselect_1.2.1 
+    ##  [5] Rcpp_1.0.13-1     zip_2.3.1         assertthat_0.2.1  snakecase_0.11.1 
+    ##  [9] yaml_2.3.10       fastmap_1.2.0     R6_2.5.1          labeling_0.4.3   
+    ## [13] generics_0.1.3    knitr_1.49        tibble_3.2.1      munsell_0.5.1    
+    ## [17] lubridate_1.9.3   tzdb_0.4.0        pillar_1.9.0      rlang_1.1.4      
+    ## [21] utf8_1.2.4        stringi_1.8.4     xfun_0.49         bit64_4.5.2      
+    ## [25] timechange_0.3.0  cli_3.6.3         withr_3.0.2       magrittr_2.0.3   
+    ## [29] digest_0.6.37     grid_4.4.2        rstudioapi_0.17.1 lifecycle_1.0.4  
+    ## [33] vctrs_0.6.5       evaluate_1.0.1    farver_2.1.2      fansi_1.0.6      
+    ## [37] colorspace_2.1-1  purrr_1.0.2       rmarkdown_2.29    tools_4.4.2      
+    ## [41] pkgconfig_2.0.3   htmltools_0.5.8.1
 
 [^1]: Chudasama, Y.V., Khunti, K., Gillies, C.L., Dhalwani, N.N.,
     Davies, M.J., Yates, T., & Zaccardi, F. (2022). Estimates of years
