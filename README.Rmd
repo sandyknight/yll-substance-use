@@ -824,6 +824,9 @@ plot_substance_use_yll_estimate()
 
 [^2]:Aragón, T.J., Lichtensztajn, D.Y., Katcher, B.S., Reiter, R. and Katz, M.H., 2007. Calculating Expected Years of Life Lost to Rank the Leading Causes of Premature Death in San Francisco. *San Francisco Department of Public Health*.
 
+## Version information
+
 ```{r, echo=FALSE}
-sessionInfo()
+info <- sessionInfo()
+print(info)
 ```
