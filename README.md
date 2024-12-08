@@ -621,9 +621,7 @@ This function is from [here](https://static-content.springer.com/esm/art%3A10.11
 The formula is:
 
 $$
-Y_x = d_x \left[ \frac{KCe^{r(n^a_x)}}{(r+\beta)^2} 
-\left( e^{z[-(r+\beta)(e^s_x + a_x) - 1]} - e^{-(r+\beta)a_x[-(r+\beta)a_x - 1]} \right) 
-+ \frac{1-K}{r} (1 - e^{r(e^s_x)}) \right]
+Y_x = d_x \left[ \frac{KCe^{r(n^a_x)}}{(r+\beta)^2} \left( e^{z[-(r+\beta)(e^s_x + a_x) - 1]} - e^{-(r+\beta)a_x[-(r+\beta)a_x - 1]} \right) + \frac{1-K}{r} (1 - e^{r(e^s_x)}) \right]
 $$
 
 ```{r function-calculate_yll}
