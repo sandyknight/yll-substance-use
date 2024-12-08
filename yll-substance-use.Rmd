@@ -497,6 +497,44 @@ return(deaths_by_age)
 
 ```
 
+```{r function-merge_alcohol_deaths}
+
+merge_alcohol_deaths  <- function(){
+ons_alc_deaths <-
+  get_ons_alcohol_specific_death_data()
+
+alc_deaths_tx <-
+get_alcohol_specific_deaths_from_tx(get_non_poisoning_deaths())  |>
+  filter(period_range == "April 2021 to March 2022", death_cause != "Alcohol-specific death" ) |>
+  group_by(sex, age) |>
+  summarise(count = sum(count, na.rm = TRUE), .groups = "drop")
+
+  age_df <-  
+  parse_age_groups(pull(ons_alc_deaths, age_group))
+
+alc_deaths_tx <-
+alc_deaths_tx |>
+  mutate(age_group = assign_age_group(pull(alc_deaths_tx, age), age_df = age_df)) |>
+  group_by(sex, age_group) |>
+  summarise(count = sum(count), .groups = "drop")
+
+alcohol_deaths <-
+bind_rows(alc_deaths_tx, ons_alc_deaths) |>
+  group_by(sex, age_group) |>
+  summarise(count = sum(count), .groups = "drop")
+
+
+alcohol_deaths <-
+alcohol_deaths |>
+  mutate(sex = tolower(sex))|> 
+  mutate(sex = str_remove(sex, "s")) |> 
+  mutate(substance = "Alcohol")
+
+return(alcohol_deaths)
+}
+
+```
+
 This function calculates the "crude" years of life lost. 
 
 The crude expected years of life lost is:
@@ -505,7 +543,7 @@ $$
 YLL = (D_{x})(e_{x}^s)
 $$
 
-Where $D_x$ is the number of deaths in the age group and $e_{x}^s$ is the mean standard age of death from the external life expectancy (the ONS life tables) for the age. This is the method used by the Global Burden of Disease Study (GBD) [1^].
+Where $D_x$ is the number of deaths in the age group and $e_{x}^s$ is the mean standard age of death from the external life expectancy (the ONS life tables) for the age. This is the method used by the Global Burden of Disease Study (GBD) [1^].   
 
 ```{r function-calculate_crude_yll}
 calculate_crude_yll <- function() {
