@@ -1,13 +1,8 @@
 ---
-title: "yll-substance-misuse"
+title: "README"
 author: "Sandy Knight"
 date: "2024-12-07"
-output: 
-  html_document:
-    theme: darkly
-    toc: yes
-    toc_float:
-      collapsed: true
+output: github_document 
 ---
 
 ## Required packages
