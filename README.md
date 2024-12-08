@@ -541,6 +541,8 @@ merge_alcohol_deaths <- function() {
 
 The functions in this section use the previously defined functions to produce the final YLL outputs when called. They do not take any arguments. 
 
+### Crude YLL
+
 This function calculates the "crude" years of life lost. 
 
 The crude expected years of life lost is:
@@ -612,6 +614,7 @@ calculate_crude_yll <- function() {
 }
 
 ```
+### YLL with weighting and discounting
 
 This function is from [here](https://static-content.springer.com/esm/art%3A10.1186%2F1471-2458-8-116/MediaObjects/12889_2007_1086_MOESM3_ESM.pdf)[^2]. It uses the same basic method but applies discounting and age-weighting according to parameters calibrated and chosen in the GBD. 
 
