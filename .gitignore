@@ -54,3 +54,5 @@ rsconnect/
 # Data folder
 data/
 
+# Shell scripts
+sh/
