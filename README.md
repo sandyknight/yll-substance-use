@@ -1,7 +1,29 @@
 README
 ================
-Sandy Knight
-2024-12-07
+
+- [Required packages](#required-packages)
+- [Set-up](#set-up)
+- [Getting the data](#getting-the-data)
+  - [Drug poisoning data](#drug-poisoning-data)
+  - [NDTMS-ONS linked dataset deaths](#ndtms-ons-linked-dataset-deaths)
+  - [ONS deaths related to drug
+    poisoning](#ons-deaths-related-to-drug-poisoning)
+  - [Non-poisoning deaths of people with contact with the treatment
+    system](#non-poisoning-deaths-of-people-with-contact-with-the-treatment-system)
+  - [ONS alcohol-specific deaths](#ons-alcohol-specific-deaths)
+  - [Life expectancy](#life-expectancy)
+- [Data processing and preparation](#data-processing-and-preparation)
+  - [Drug deaths](#drug-deaths)
+  - [Alcohol deaths](#alcohol-deaths)
+  - [Age group parsing](#age-group-parsing)
+- [Data merging](#data-merging)
+- [Calculating years of life lost
+  (YLL)](#calculating-years-of-life-lost-yll)
+- [Plotting results](#plotting-results)
+  - [Plot crude estimate](#plot-crude-estimate)
+  - [Plot discounted and weighted
+    estimate](#plot-discounted-and-weighted-estimate)
+- [Version information](#version-information)
 
 ## Required packages
 
@@ -11,7 +33,7 @@ library(ggplot2)
 library(janitor)
 library(openxlsx)
 library(stringr)
-library(arrow)
+library(arrow) # install.packages("arrow")
 library(tidyr)
 library(glue)
 library(scales)
@@ -825,14 +847,9 @@ plot_substance_use_yll_estimate <-
 plot_substance_use_yll_estimate() 
 ```
 
-    ## Joining with `by = join_by(sex, age_group)`
-    ## Joining with `by = join_by(age, sex)`
-
 ![](README_files/figure-gfm/function-plot_substance_use_yll_estimate-1.png)<!-- -->
 
-``` r
-sessionInfo()
-```
+## Version information
 
     ## R version 4.4.2 (2024-10-31 ucrt)
     ## Platform: x86_64-w64-mingw32/x64

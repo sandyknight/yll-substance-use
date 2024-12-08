@@ -1,8 +1,8 @@
 ---
 title: "README"
-author: "Sandy Knight"
-date: "2024-12-07"
-output: github_document 
+output: 
+  github_document:
+      toc: true
 ---
 
 ## Required packages
@@ -13,7 +13,7 @@ library(ggplot2)
 library(janitor)
 library(openxlsx)
 library(stringr)
-library(arrow)
+library(arrow) # install.packages("arrow")
 library(tidyr)
 library(glue)
 library(scales)
@@ -741,7 +741,7 @@ calculate_substance_use_yll <- function() {
 
 Produces a plot of the crude YLL estimate. Sources two scripts that define `ggplot2` aesthetics but don't contibute to the analysis.
 
-```{r function-plot_crude_yll_estimate}
+```{r function-plot_crude_yll_estimate, message=FALSE, warning=FALSE}
 plot_crude_yll_estimate <- 
   function(){
 source("R/dhsc_colour_palette.R")
@@ -781,7 +781,7 @@ plot_crude_yll_estimate()
 
 Produces a similar plot for the discounted and age-weighted YLL estimate
 
-```{r function-plot_substance_use_yll_estimate}
+```{r function-plot_substance_use_yll_estimate, message=FALSE, warning=FALSE}
 plot_substance_use_yll_estimate <-
   function(){
     source("R/dhsc_colour_palette.R")
