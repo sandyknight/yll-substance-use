@@ -677,8 +677,7 @@ calculate_crude_yll <- function() {
 
 This function is from
 [here](https://static-content.springer.com/esm/art%3A10.1186%2F1471-2458-8-116/MediaObjects/12889_2007_1086_MOESM3_ESM.pdf)[^2].
-It uses the same basic method but applies discounting and age-weighting
-according to parameters calibrated and chosen in the GBD.
+It uses the same basic method but applies discounting and age-weighting.
 
 The formula is:
 
@@ -691,6 +690,9 @@ where:
 𝐾 = age-weighting modulation constant (usually 𝐾=1)  
 𝐶 = adjustment constant for age-weights (usually 𝐶=0.1658)  
 𝑒 = standard life expectancy at age of death (years)  
+
+The default values for these parameters were chosen and calibrated in
+the original Global Burden of Disease (GBD) study [^3]
 
 ``` r
 calculate_yll <-
@@ -913,3 +915,8 @@ plot_substance_use_yll_estimate()
     Katz, M.H., 2007. Calculating Expected Years of Life Lost to Rank
     the Leading Causes of Premature Death in San Francisco. *San
     Francisco Department of Public Health*.
+
+[^3]: Murray, C.J., Lopez, A.D. and Jamison, D.T., 1994. The global
+    burden of disease in 1990: summary results, sensitivity analysis and
+    future directions. *Bulletin of the world health organization*,
+    72(3), p.495.
