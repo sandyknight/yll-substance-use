@@ -31,15 +31,10 @@ But others, broadly those coded as accidental/intentional self-poisonings or sel
 The data linkage between ONS mortality and NDTMS allows some of those deaths to be identified indirectly as related to drug misuse where the person that died had had contact with the drug treatment system within a year of their date of death. 
 
 ```{r, echo=FALSE, include=FALSE, message=FALSE, warning=FALSE}
-source("R/00_required_packages.R")
-source("R/01_get_drug_poisoning_deaths.R")
-source("R/02_get_ons_drug_poisoning_data.R")
-source("R/03_get_non_poisoning_deaths.R")
-source("R/04_get_ons_alcohol_specific_death_data.R")
-source("R/06_process_poisoning_data.R")
-source("R/07_process_deaths_in_treatment.R")
-source("R/08_get_alcohol_specific_deaths_from_tx.R")
+
 ```
+
+
 
 [^1]: The criteria for this classification are described in `Box 2` of the `Definition` tab of the latest relese of *Deaths related to drug poisoning, England and Wales* available [here](https://www.ons.gov.uk/peoplepopulationandcommunity/birthsdeathsandmarriages/deaths/datasets/deathsrelatedtodrugpoisoningenglandandwalesreferencetable).
 [^2]: This is the first four rows of `Table 11` in the same ONS release.
