@@ -1,11 +1,12 @@
 
+# Load scripts
 
 sapply(file.path("R", list.files("R/")), source)
 
-#FIXME
-# Need to number scripts so they're loaded in the correct order
+# Produce and save plots
 
-p1 <- plot_crude_yll_estimate()
+p1 <-
+  plot_crude_yll_estimate()
 
 png("plots/crude_yll_plot.png", width = 15, height = 10, units = "cm", res = 300)
 p1

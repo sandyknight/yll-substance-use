@@ -28,6 +28,8 @@ Two of the datasets used in the analysis aren't publicly available, so I've not 
 │       ├── post election data for Jon- sent.xlsx
 │       └── table1_all deaths_Cocaine version 1.xlsx
 ```
+Clone or download this repository
+Add the data files and directory structure
 
 I've included the session info with R and package versions at the end to help with any compatability issues.
 

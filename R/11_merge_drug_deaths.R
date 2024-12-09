@@ -7,8 +7,8 @@ merge_drug_deaths <- function() {
       years = 2022,                       # Only include data for the year 2022
       by = "age",                         # Aggregate results by age
       by_sex = TRUE                       # Also stratify by sex
-    ) |> 
-    rename("age" = ageinyrs) |>           # Rename age variable 
+    ) |>
+    rename("age" = ageinyrs) |>           # Rename age variable
     group_by(age, sex) |>                 # Group by age and sex
     summarise(count = sum(count), .groups = "drop") # Summarise total counts and ungroup
 
@@ -41,3 +41,4 @@ merge_drug_deaths <- function() {
   # Return the final aggregated data frame
   return(deaths_by_age)
 }
+

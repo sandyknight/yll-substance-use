@@ -436,7 +436,7 @@ parse_age_groups <- function(age_groups) {
 ```
 
 ```{r function-assign_age_group}
-# Simplified assign_age_group function
+
 assign_age_group <- function(ages, age_df) {
   # We assume ages is already an integer vector
   age_groups <- character(length(ages))

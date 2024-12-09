@@ -1,3 +1,4 @@
+# Simplified parse_age_groups function
 parse_age_groups <- function(age_groups) {
   # Patterns for age group formats
   pattern_range <- "^([0-9]+)-([0-9]+)$"
@@ -19,4 +20,23 @@ parse_age_groups <- function(age_groups) {
     upper[is_range] <- as.numeric(sub(pattern_range, "\\2", age_groups[is_range]))
   }
 
+  # For under: "<X" means lower = -Inf, upper = X
+  if (any(is_under)) {
+    upper[is_under] <- as.numeric(sub(pattern_under, "\\1", age_groups[is_under]))
+    lower[is_under] <- -Inf
+  }
+
+  # For over: "X+" means lower = X, upper = Inf
+  if (any(is_over)) {
+    lower[is_over] <- as.numeric(sub(pattern_over, "\\1", age_groups[is_over]))
+    upper[is_over] <- Inf
+  }
+
+  # Create and return a data frame
+  data.frame(
+    age_group = age_groups,
+    lower = lower,
+    upper = upper,
+    stringsAsFactors = FALSE
+  )
 }

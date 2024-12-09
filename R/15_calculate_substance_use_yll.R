@@ -1,14 +1,14 @@
 calculate_substance_use_yll <- function() {
   # Merge and summarise alcohol-related deaths by age group and sex
-  alcohol_deaths <- 
+  alcohol_deaths <-
     merge_alcohol_deaths()
 
   # Create a data frame mapping age values to defined age groups, derived from alcohol_deaths
-  age_df <- 
+  age_df <-
     parse_age_groups(unique(pull(alcohol_deaths, age_group)))
 
   # Load life tables
-  life_tables <- 
+  life_tables <-
     get_life_tables()
   # Incorporate age groups into life tables, then compute average age and life expectancy (ex) for each age group and sex
   life_tables <-
