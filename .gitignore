@@ -52,7 +52,7 @@ po/*~
 rsconnect/
 
 # Data folder
-data/
+data/raw
 
 # Shell scripts
 sh/
