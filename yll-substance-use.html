@@ -2020,7 +2020,23 @@ parse_age_groups &lt;- function(age_groups) {
   # Return the final aggregated dataset
   return(alcohol_deaths)
 }</code></pre>
-<p>Combines poisoning and non-poisoning drugs deaths data</p>
+</div>
+<div id="counts-of-aggregate-deaths" class="section level2">
+<h2>Counts of aggregate deaths</h2>
+<p>These functions aggregate and plot the total count of deaths. The
+only categories are the substance, poisoning or non-poisoning, and
+whether they were counted in the initial ONS data or added from analysis
+of the linked dataset:</p>
+<ul>
+<li>Initial poisoning deaths</li>
+<li>Additional poisoning deaths</li>
+<li>Non-poisoning deaths: Died in treatment</li>
+<li>Non-poisoning deaths: Died within a year of discharge</li>
+<li>Non-poisoning deaths: Died one or more years following discharge
+<em>(not counted in the total)</em></li>
+</ul>
+<div id="combines-poisoning-and-non-poisoning-drugs-deaths-data" class="section level4">
+<h4>Combines poisoning and non-poisoning drugs deaths data</h4>
 <pre class="r"><code>#&#39; Combine national data 
 #&#39;
 #&#39; Merges poisoning data and treatment death data, ensuring consistent grouping by death category.
@@ -2035,7 +2051,9 @@ combine_national_data_drugs &lt;- function(poisoning_data, treatment_deaths_data
     rename(treatment_deaths_data, &quot;death_category&quot; = treatment_status, &quot;year&quot; = period)
   )
 }</code></pre>
-<p>Gets national drugs deaths occurrences data for 2022</p>
+</div>
+<div id="gets-national-drugs-deaths-occurrences-data-for-2022" class="section level4">
+<h4>Gets national drugs deaths occurrences data for 2022</h4>
 <pre class="r"><code>get_national_data_drugs &lt;- function() {
   combine_national_data_drugs(
     poisoning_data = process_poisoning_data(
@@ -2052,7 +2070,9 @@ combine_national_data_drugs &lt;- function(poisoning_data, treatment_deaths_data
     )
   )
 }</code></pre>
-<p>Relabels national data for plot</p>
+</div>
+<div id="relabels-national-data-for-plot" class="section level4">
+<h4>Relabels national data for plot</h4>
 <pre class="r"><code>#&#39; Relabel national data
 #&#39; 
 #&#39; Adjusts labels for death categories, emphasizing poisoning and non-poisoning distinctions.
@@ -2079,8 +2099,10 @@ relabel_national_data &lt;- function(national_data) {
       )
     )
 }</code></pre>
-<p>Plots national drugs death data showing the additional deaths
-calculated using the data linkage</p>
+</div>
+<div id="plots-national-drugs-death-data-showing-the-additional-deaths-calculated-using-the-data-linkage" class="section level4">
+<h4>Plots national drugs death data showing the additional deaths
+calculated using the data linkage</h4>
 <pre class="r"><code># Function to create the plot
 plot_national_data_drugs &lt;- function(plot_data) {
   ttl &lt;- 
@@ -2145,7 +2167,9 @@ plot_national_data_drugs &lt;- function(plot_data) {
       title = &quot;Deaths associated with drug misuse&quot;
     )
 }</code></pre>
-<p>Adds annotations to national drugs deaths plot</p>
+</div>
+<div id="adds-annotations-to-national-drugs-deaths-plot" class="section level4">
+<h4>Adds annotations to national drugs deaths plot</h4>
 <pre class="r"><code># Function to add annotations to the plot
 add_plot_annotations &lt;- function(plot, data) {
   # Filter data for the latest year
@@ -2213,6 +2237,10 @@ add_plot_annotations &lt;- function(plot, data) {
   
   return(plot)
 }</code></pre>
+</div>
+<div id="returns-the-aggregate-deaths-plot-showing-the-total-is-composed-of-the-relevant-categories" class="section level4">
+<h4>Returns the aggregate deaths plot showing the total is composed of
+the relevant <a href="#id_#%20Counts%20of%20aggregate%20deaths">categories</a></h4>
 <pre class="r"><code>create_national_drugs_deaths_plot &lt;- function(){
  data &lt;- get_national_data_drugs() |&gt; 
   relabel_national_data() 
@@ -2225,6 +2253,7 @@ p &lt;-
 
 return(p)
 }</code></pre>
+</div>
 </div>
 <div id="calculating-years-of-life-lost-yll" class="section level2">
 <h2>Calculating years of life lost (YLL)</h2>

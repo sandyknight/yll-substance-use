@@ -552,7 +552,17 @@ merge_alcohol_deaths <- function() {
 
 ```
 
-Combines poisoning and non-poisoning drugs deaths data
+## Counts of aggregate deaths
+
+These functions aggregate and plot the total count of deaths. The only categories are the substance, poisoning or non-poisoning, and whether they were counted in the initial ONS data or added from analysis of the linked dataset:
+
+* Initial poisoning deaths
+* Additional poisoning deaths
+* Non-poisoning deaths: Died in treatment
+* Non-poisoning deaths: Died within a year of discharge
+* Non-poisoning deaths: Died one or more years following discharge *(not counted in the total)*
+
+#### Combines poisoning and non-poisoning drugs deaths data
 
 ```{r function-combine_national_data_drugs}
 #' Combine national data 
@@ -571,7 +581,7 @@ combine_national_data_drugs <- function(poisoning_data, treatment_deaths_data) {
 }
 ```
 
-Gets national drugs deaths occurrences data for 2022
+#### Gets national drugs deaths occurrences data for 2022
 
 ```{r function-get_national_data_drugs}
 
@@ -594,7 +604,7 @@ get_national_data_drugs <- function() {
 
 ```
 
-Relabels national data for plot
+#### Relabels national data for plot
 
 ```{r function-relabel_national_data}
 #' Relabel national data
@@ -626,7 +636,7 @@ relabel_national_data <- function(national_data) {
 
 ```
 
-Plots national drugs death data showing the additional deaths calculated using the data linkage
+#### Plots national drugs death data showing the additional deaths calculated using the data linkage
 
 ```{r function-plot_national_data_drugs}
 # Function to create the plot
@@ -697,7 +707,7 @@ plot_national_data_drugs <- function(plot_data) {
 ```
 
 
-Adds annotations to national drugs deaths plot
+#### Adds annotations to national drugs deaths plot
 
 ```{r}
 # Function to add annotations to the plot
@@ -770,6 +780,7 @@ add_plot_annotations <- function(plot, data) {
 
 ```
 
+#### Returns the aggregate deaths plot showing the total is composed of the relevant [categories](## Counts of aggregate deaths) 
 
 ```{r function-create_national_drugs_deaths_plot}
 create_national_drugs_deaths_plot <- function(){
