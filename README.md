@@ -19,6 +19,9 @@ README
 - [Data merging](#data-merging)
 - [Calculating years of life lost
   (YLL)](#calculating-years-of-life-lost-yll)
+  - [Initial estimate](#initial-estimate)
+  - [YLL with age-weighting and
+    discounting](#yll-with-age-weighting-and-discounting)
 - [Plotting results](#plotting-results)
   - [Plot crude estimate](#plot-crude-estimate)
   - [Plot discounted and weighted
@@ -49,6 +52,9 @@ you’ll have to add the two original data files with this structure:
     │   └── raw
     │       ├── post election data for Jon- sent.xlsx
     │       └── table1_all deaths_Cocaine version 1.xlsx
+
+Clone or download this repository Add the data files and directory
+structure
 
 I’ve included the session info with R and package versions at the end to
 help with any compatability issues.
@@ -591,6 +597,8 @@ merge_alcohol_deaths <- function() {
 
 ## Calculating years of life lost (YLL)
 
+### Initial estimate
+
 This function calculates the “crude” years of life lost.
 
 The crude expected years of life lost is:
@@ -664,6 +672,8 @@ calculate_crude_yll <- function() {
   return(yll)
 }
 ```
+
+### YLL with age-weighting and discounting
 
 This function is from
 [here](https://static-content.springer.com/esm/art%3A10.1186%2F1471-2458-8-116/MediaObjects/12889_2007_1086_MOESM3_ESM.pdf)[^2].
