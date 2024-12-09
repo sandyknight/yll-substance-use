@@ -682,7 +682,7 @@ according to parameters calibrated and chosen in the GBD.
 
 The formula is:
 
-$$Y_x = d_x \left[ \frac{KCe^{r(n^a_x)}}{(r+\beta)^2} \left( e^{z[-(r+\beta)(e^s_x + a_x) - 1]} - e^{-(r+\beta)a_x[-(r+\beta)a_x - 1]} \right) + \frac{1-K}{r} (1 - e^{r(e^s_x)}) \right]$$
+$$Y_x = d_x \left[ \frac{KCe^{r(n^a_x)}}{(r+\beta)^2} \left( e^{z[-(r+\beta)(e^s_x + a_x) - 1]} - e^{-(r+\beta)a_x[-(r+\beta)a_x - 1]} \right) + \frac{1-K}{r} (1 - e^{r(e^s_x)}) \right]$$  
 where: 𝑎 = age of death (years) 𝑟 = discount rate (usually 3%) 𝛽 = age
 weighting constant (usually 𝛽=0.04) 𝐾 = age-weighting modulation
 constant (usually 𝐾=1) 𝐶 = adjustment constant for age-weights (usually
