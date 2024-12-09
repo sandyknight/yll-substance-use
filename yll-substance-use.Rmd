@@ -26,7 +26,6 @@ library(scales)
 
 
 
-
 ## Getting the data
 
 Each of these functions take no arguments and return a raw dataset when called.
@@ -553,6 +552,241 @@ merge_alcohol_deaths <- function() {
 
 ```
 
+Combines poisoning and non-poisoning drugs deaths data
+
+```{r function-combine_national_data_drugs}
+#' Combine national data 
+#'
+#' Merges poisoning data and treatment death data, ensuring consistent grouping by death category.
+#'
+#' @param poisoning_data Processed poisoning data.
+#' @param treatment_deaths_data Processed treatment death data.
+#' @return A tibble combining both datasets.
+combine_national_data_drugs <- function(poisoning_data, treatment_deaths_data) {
+  bind_rows(
+    rename(poisoning_data, "death_category" = additional_poisoning_deaths) |>
+      rename_with(.cols = 1, .fn = ~ str_remove(.x, "dod_|reg_")),
+    rename(treatment_deaths_data, "death_category" = treatment_status, "year" = period)
+  )
+}
+```
+
+Gets national drugs deaths occurrences data for 2022
+
+```{r function-get_national_data_drugs}
+
+get_national_data_drugs <- function() {
+  combine_national_data_drugs(
+    poisoning_data = process_poisoning_data(
+      data = get_drug_poisoning_deaths(),
+      date_of = "occurrence",
+      years = 2022
+    ),
+    treatment_deaths_data = process_deaths_in_treatment(
+      data = get_non_poisoning_deaths(),
+      years = 2022,
+      exclude_poisoning = TRUE,
+      by_treatment_status = TRUE,
+      by_death_cause = FALSE
+    )
+  )
+}
+
+```
+
+Relabels national data for plot
+
+```{r function-relabel_national_data}
+#' Relabel national data
+#' 
+#' Adjusts labels for death categories, emphasizing poisoning and non-poisoning distinctions.
+#'
+#' @param national_data Combined national dataset.
+#' @return A tibble with updated and ordered death category labels.
+relabel_national_data <- function(national_data) {
+  national_data |> 
+    mutate(death_category = case_when(
+      str_detect(death_category, "poisoning") ~ death_category,
+      TRUE ~ paste("Non-poisoning deaths:", death_category)
+    )) |> 
+    mutate(
+      death_category = factor(
+        death_category,
+        levels = rev(c(
+          "Initial poisoning deaths",
+          "Additional poisoning deaths",
+          "Non-poisoning deaths: Died in treatment",
+          "Non-poisoning deaths: Died within a year of discharge",
+          "Non-poisoning deaths: Died one or more years following discharge"
+        )),
+        ordered = TRUE
+      )
+    )
+}
+
+```
+
+Plots national drugs death data showing the additional deaths calculated using the data linkage
+
+```{r function-plot_national_data_drugs}
+# Function to create the plot
+plot_national_data_drugs <- function(plot_data) {
+  ttl <- 
+    plot_data |> 
+    filter(death_category != "Non-poisoning deaths: Died one or more years following discharge") |> 
+    pull(count) |> sum()
+  
+  
+  ggplot(plot_data, aes(x = year, y = count)) + 
+    geom_col(
+      aes(
+        fill = death_category, 
+        alpha = death_category, 
+        linetype = death_category
+      ), 
+      colour = "black", 
+      width = 0.45
+    ) +
+    geom_text(
+      aes(
+        label = scales::comma(count), 
+        group = death_category, 
+        alpha = death_category
+      ), 
+      position = position_stack(0.5),
+      size = 4
+    ) + 
+    ggsci::scale_fill_lancet(alpha = 0.8) + 
+    theme_bw() + 
+    theme(
+      text = element_text(size = 18),
+      legend.position = "none",
+      axis.ticks.x = element_blank(),
+      panel.grid = element_blank()
+    ) +
+    scale_y_continuous(
+      labels = scales::comma, 
+      breaks = c(2500, 5000, ttl, 10000)
+    ) + 
+    scale_x_continuous(
+      limits = c(2021, 2026), 
+      breaks = c(2022)
+    ) +
+    scale_alpha_manual(values = c(
+      "Initial poisoning deaths" = 1,
+      "Additional poisoning deaths" = 1,
+      "Non-poisoning deaths: Died in treatment" = 1,
+      "Non-poisoning deaths: Died within a year of discharge" = 1,
+      "Non-poisoning deaths: Died one or more years following discharge" = 0.3
+    )) +
+    scale_linetype_manual(values = c(
+      "Initial poisoning deaths" = 1,
+      "Additional poisoning deaths" = 1,
+      "Non-poisoning deaths: Died in treatment" = 1,
+      "Non-poisoning deaths: Died within a year of discharge" = 1,
+      "Non-poisoning deaths: Died one or more years following discharge" = 3
+    )) + 
+    labs(
+      fill = NULL, 
+      x = NULL, 
+      y = "Count of deaths", 
+      title = "Deaths associated with drug misuse"
+    )
+}
+
+```
+
+
+Adds annotations to national drugs deaths plot
+
+```{r}
+# Function to add annotations to the plot
+add_plot_annotations <- function(plot, data) {
+  # Filter data for the latest year
+  ttl <- 
+    data |> 
+    filter(death_category != "Non-poisoning deaths: Died one or more years following discharge") |> 
+    pull(count) |> sum()
+  
+  latest_year <- max(data$year)
+  annotation_data <- data %>%
+    filter(year == latest_year) %>%
+    arrange(rev(death_category)) %>%
+    mutate(
+      cumulative_count = cumsum(count),
+      y_start = lag(cumulative_count, default = 0),
+      y_end = cumulative_count,
+      y_mid = (y_start + y_end) / 2
+    )
+  
+  # Create a mapping of death categories to labels
+  labels <- c(
+    "Initial poisoning deaths" = "Drug poisoning deaths related to drug misuse\nas classified in ONS data",
+    "Additional poisoning deaths" = "Drug poisoning deaths with a record of treatment\nbut not classified as related to drug misuse by ONS",
+    "Non-poisoning deaths: Died in treatment" = "Deaths in treatment with a cause other than poisoning",
+    "Non-poisoning deaths: Died within a year of discharge" = "Deaths within a year of leaving treatment with a cause\nother than poisoning",
+    "Non-poisoning deaths: Died one or more years following discharge" = "Deaths a year or more after leaving treatment with a cause\nother than poisoning"
+  )
+  labels <- rev(labels)
+  # Add annotations
+  for (i in seq_len(nrow(annotation_data))) {
+    row <- annotation_data[i, ]
+    color <- ifelse(
+      row$death_category == "Non-poisoning deaths: Died one or more years following discharge", 
+      "darkgrey", 
+      "black"
+    )
+    plot <- plot +
+      geom_segment(
+        x = latest_year + 0.3, 
+        xend = latest_year + 0.3, 
+        y = row$y_start, 
+        yend = row$y_end,
+        arrow = arrow(
+          ends = "both", 
+          angle = 90, 
+          length = unit(0.1, "cm")
+        ), 
+        linewidth = 1,
+        colour = color
+      ) +
+      annotate(
+        "text",
+        x = latest_year + 0.4,
+        y = row$y_mid,
+        label = labels[[row$death_category]],
+        hjust = 0,
+        colour = color,
+        size = 4
+      )
+  }
+  plot <- 
+  plot + 
+    geom_segment(x = latest_year - 0.2, xend = latest_year - 1.1, y = ttl, yend = ttl ,linewidth = 1 , arrow = arrow(length = unit(.2, "cm")))
+  
+  
+  return(plot)
+}
+
+```
+
+
+```{r function-create_national_drugs_deaths_plot}
+create_national_drugs_deaths_plot <- function(){
+ data <- get_national_data_drugs() |> 
+  relabel_national_data() 
+
+p <- 
+  plot_national_data_drugs(data) 
+
+p <-
+  add_plot_annotations(plot = p, data = data)
+
+return(p)
+}
+```
+
+
 ## Calculating years of life lost (YLL)
 
 This function calculates the "crude" years of life lost. 
@@ -565,7 +799,7 @@ $$
 
 Where $D_x$ is the number of deaths in the age group and $e_{x}^s$ is the mean standard age of death from the external life expectancy (the ONS life tables) for the age. This is the method used by the Global Burden of Disease Study (GBD) [^1].   
 
-```{r function-calculate_crude_yll}
+```{r function-calculate_crude_yll, message=FALSE}
 calculate_crude_yll <- function() {
   # Step 1: Merge alcohol-related deaths into a single dataset
   alcohol_deaths <- merge_alcohol_deaths()
@@ -733,11 +967,17 @@ calculate_substance_use_yll <- function() {
 
 ## Plotting results
 
-### Plot crude estimate
+### Plot count of drug deaths
+
+```{r, message=FALSE, warning=FALSE}
+create_national_drugs_deaths_plot()
+```
+
+### Plot YLL crude estimate
 
 Produces a plot of the crude YLL estimate. Sources two scripts that define `ggplot2` aesthetics but don't contibute to the analysis.
 
-```{r function-plot_crude_yll_estimate}
+```{r function-plot_crude_yll_estimate, message=FALSE}
 plot_crude_yll_estimate <- 
   function(){
 source("R/dhsc_colour_palette.R")
@@ -777,7 +1017,7 @@ plot_crude_yll_estimate()
 
 Produces a similar plot for the discounted and age-weighted YLL estimate
 
-```{r function-plot_substance_use_yll_estimate}
+```{r function-plot_substance_use_yll_estimate, message=FALSE}
 plot_substance_use_yll_estimate <-
   function(){
     source("R/dhsc_colour_palette.R")

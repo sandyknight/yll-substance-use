@@ -1,0 +1,45 @@
+---
+title: "Counting deaths associated with substance use"
+author: "Sandy Knight"
+date: "2024-12-09" 
+output: 
+  html_document:
+    theme: darkly
+    toc: yes
+    toc_float:
+      collapsed: true
+---
+#  Number of deaths associated with drug use 
+
+The ONS classifies death related to drug poisoning according ICD-10 codes. Certain ICD-10 codes classify a death as a "drug misuse death"[^1]. Each of these requires a specific substance (e.g. heroin) or substance category (e.g. opioids) to be indicated either in the ICD-10 code or on the death certificate. 
+
+There are deaths each year where the ONS holds no information on the substance(s) involved [^2]
+
+| Year of death registration | All drug poisonings | Number of deaths without substance information | Percentage without substance information |
+| :------------------------: | :-----------------: | :--------------------------------------------: | :---------------------------------------: |
+|            2023            |       5,448         |                     1,245                      |                  22.9                     |
+|            2022            |       4,907         |                     1,239                      |                  25.2                     |
+|            2021            |       4,859         |                     1,219                      |                  25.1                     |
+|            2020            |       4,561         |                     1,050                      |                  23.0                     |
+
+
+
+Some of these will be classified as related to drug misuse where an ICD-10 code indicates mental and behavioural disorders due to drug use (excluding alcohol and tobacco) without a specific substance (e.g. F19 "multiple drug use and use of other psychoactive substances"). 
+
+But others, broadly those coded as accidental/intentional self-poisonings or self-poisonings of unknown intent, will not be classfified as related to drug misuse unless a controlled drug under Misuse of Drugs Act 1971 was mentioned on the death record. 
+
+The data linkage between ONS mortality and NDTMS allows some of those deaths to be identified indirectly as related to drug misuse where the person that died had had contact with the drug treatment system within a year of their date of death. 
+
+```{r, echo=FALSE, include=FALSE, message=FALSE, warning=FALSE}
+source("R/00_required_packages.R")
+source("R/01_get_drug_poisoning_deaths.R")
+source("R/02_get_ons_drug_poisoning_data.R")
+source("R/03_get_non_poisoning_deaths.R")
+source("R/04_get_ons_alcohol_specific_death_data.R")
+source("R/06_process_poisoning_data.R")
+source("R/07_process_deaths_in_treatment.R")
+source("R/08_get_alcohol_specific_deaths_from_tx.R")
+```
+
+[^1]: The criteria for this classification are described in `Box 2` of the `Definition` tab of the latest relese of *Deaths related to drug poisoning, England and Wales* available [here](https://www.ons.gov.uk/peoplepopulationandcommunity/birthsdeathsandmarriages/deaths/datasets/deathsrelatedtodrugpoisoningenglandandwalesreferencetable).
+[^2]: This is the first four rows of `Table 11` in the same ONS release.
