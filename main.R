@@ -36,11 +36,11 @@ c(
 )
 
 yll_estimate %>%
-
+  mutate(age_group = factor(age_group, levels = age_group_order)) |>
+  arrange(age_group) |>
   select(-count)  |>
-  pivot_wider(names_from = substance, values_from = yll) %>%
-  arrange(age)
-
+  pivot_wider(names_from = substance, values_from = yll, values_fill = 0)  |>
+  flextable::flextable()
 # Produce and save plots
 
 p1 <-
