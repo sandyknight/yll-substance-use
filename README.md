@@ -1,46 +1,73 @@
 README
 ================
 
-- [Required packages](#required-packages)
-- [Set-up](#set-up)
-- [Getting the data](#getting-the-data)
-  - [Drug poisoning data](#drug-poisoning-data)
-  - [NDTMS-ONS linked dataset deaths](#ndtms-ons-linked-dataset-deaths)
-- [Source files](#source-files)
-- [Getting the data](#getting-the-data-1)
-  - [Drug poisoning data](#drug-poisoning-data-1)
-  - [NDTMS-ONS linked dataset
-    deaths](#ndtms-ons-linked-dataset-deaths-1)
-  - [ONS deaths related to drug
-    poisoning](#ons-deaths-related-to-drug-poisoning)
-  - [Non-poisoning deaths of people with contact with the treatment
-    system](#non-poisoning-deaths-of-people-with-contact-with-the-treatment-system)
-  - [ONS alcohol-specific deaths](#ons-alcohol-specific-deaths)
-  - [Life expectancy](#life-expectancy)
-- [Data processing and preparation](#data-processing-and-preparation)
-  - [Drug deaths](#drug-deaths)
-  - [Alcohol deaths](#alcohol-deaths)
-  - [Age group parsing](#age-group-parsing)
-- [Data merging](#data-merging)
-- [Counts of aggregate deaths](#counts-of-aggregate-deaths)
-  - [Drugs](#drugs)
-  - [Alcohol](#alcohol)
-  - [Drugs and alcohol](#drugs-and-alcohol)
-- [Calculating years of life lost
-  (YLL)](#calculating-years-of-life-lost-yll)
-  - [Initial estimate](#initial-estimate)
-  - [Plot crude estimate](#plot-crude-estimate)
-  - [YLL with age-weighting and
-    discounting](#yll-with-age-weighting-and-discounting)
-- [Plotting results](#plotting-results)
-  - [Plot count of drug deaths](#plot-count-of-drug-deaths)
-  - [Plot additional alcohol deaths](#plot-additional-alcohol-deaths)
-  - [Plot all deaths by substance and
-    source](#plot-all-deaths-by-substance-and-source)
-  - [Plot YLL crude estimate](#plot-yll-crude-estimate)
-  - [Plot discounted and weighted
-    estimate](#plot-discounted-and-weighted-estimate)
-- [Version information](#version-information)
+- <a href="#required-packages" id="toc-required-packages">Required
+  packages</a>
+- <a href="#set-up" id="toc-set-up">Set-up</a>
+- <a href="#getting-the-data" id="toc-getting-the-data">Getting the
+  data</a>
+  - <a href="#drug-poisoning-data" id="toc-drug-poisoning-data">Drug
+    poisoning data</a>
+  - <a href="#ndtms-ons-linked-dataset-deaths"
+    id="toc-ndtms-ons-linked-dataset-deaths">NDTMS-ONS linked dataset
+    deaths</a>
+- <a href="#source-files" id="toc-source-files">Source files</a>
+- <a href="#getting-the-data-1" id="toc-getting-the-data-1">Getting the
+  data</a>
+  - <a href="#ndtms-ons-linked-dataset-deaths-1"
+    id="toc-ndtms-ons-linked-dataset-deaths-1">NDTMS-ONS linked dataset
+    deaths</a>
+  - <a href="#ons-deaths-related-to-drug-poisoning"
+    id="toc-ons-deaths-related-to-drug-poisoning">ONS deaths related to drug
+    poisoning</a>
+  - <a
+    href="#non-poisoning-deaths-of-people-with-contact-with-the-treatment-system"
+    id="toc-non-poisoning-deaths-of-people-with-contact-with-the-treatment-system">Non-poisoning
+    deaths of people with contact with the treatment system</a>
+  - <a href="#ons-alcohol-specific-deaths"
+    id="toc-ons-alcohol-specific-deaths">ONS alcohol-specific deaths</a>
+  - <a href="#life-expectancy" id="toc-life-expectancy">Life expectancy</a>
+- <a href="#data-processing-and-preparation"
+  id="toc-data-processing-and-preparation">Data processing and
+  preparation</a>
+  - <a href="#drug-deaths" id="toc-drug-deaths">Drug deaths</a>
+  - <a href="#alcohol-deaths" id="toc-alcohol-deaths">Alcohol deaths</a>
+  - <a href="#age-group-parsing" id="toc-age-group-parsing">Age group
+    parsing</a>
+- <a href="#data-merging" id="toc-data-merging">Data merging</a>
+- <a href="#counts-of-aggregate-deaths"
+  id="toc-counts-of-aggregate-deaths">Counts of aggregate deaths</a>
+  - <a href="#drugs" id="toc-drugs">Drugs</a>
+  - <a href="#alcohol" id="toc-alcohol">Alcohol</a>
+  - <a href="#drugs-and-alcohol" id="toc-drugs-and-alcohol">Drugs and
+    alcohol</a>
+- <a href="#calculating-years-of-life-lost-yll"
+  id="toc-calculating-years-of-life-lost-yll">Calculating years of life
+  lost (YLL)</a>
+  - <a href="#initial-estimate" id="toc-initial-estimate">Initial
+    estimate</a>
+  - <a href="#plot-crude-estimate" id="toc-plot-crude-estimate">Plot crude
+    estimate</a>
+  - <a href="#yll-with-age-weighting-and-discounting"
+    id="toc-yll-with-age-weighting-and-discounting">YLL with age-weighting
+    and discounting</a>
+- <a href="#plotting-results" id="toc-plotting-results">Plotting
+  results</a>
+  - <a href="#plot-count-of-drug-deaths"
+    id="toc-plot-count-of-drug-deaths">Plot count of drug deaths</a>
+  - <a href="#plot-additional-alcohol-deaths"
+    id="toc-plot-additional-alcohol-deaths">Plot additional alcohol
+    deaths</a>
+  - <a href="#plot-all-deaths-by-substance-and-source"
+    id="toc-plot-all-deaths-by-substance-and-source">Plot all deaths by
+    substance and source</a>
+  - <a href="#plot-yll-crude-estimate" id="toc-plot-yll-crude-estimate">Plot
+    YLL crude estimate</a>
+  - <a href="#plot-discounted-and-weighted-estimate"
+    id="toc-plot-discounted-and-weighted-estimate">Plot discounted and
+    weighted estimate</a>
+- <a href="#version-information" id="toc-version-information">Version
+  information</a>
 
 ## Required packages
 
@@ -80,16 +107,6 @@ called.
 
 ### Drug poisoning data
 
-The ONS publishes drug poisonings and classifies them as “related to
-drug misuse” given certain criteria i.e. specific ICD-10 codes on the
-death record.
-
-The linkage of NDTMS and ONS data reveals that some deaths that had
-insufficient information for the ONS to apply this classification are
-probably related to drug misuse since they occured either in treatment
-or within a year of discharge. This analysis uses data from both sources
-to adjust the total number of deaths to include these additional deaths.
-
 The functions in this section load each of the raw datasets when called.
 
 ### NDTMS-ONS linked dataset deaths
@@ -115,20 +132,6 @@ source("R/dhsc_colour_palette.R")
 
 Each of these functions take no arguments and return a raw dataset when
 called.
-
-### Drug poisoning data
-
-The ONS publishes drug poisonings and classifies them as “related to
-drug misuse” given certain criteria i.e. specific ICD-10 codes on the
-death record.
-
-The linkage of NDTMS and ONS data reveals that some deaths that had
-insufficient information for the ONS to apply this classification are
-probably related to drug misuse since they occured either in treatment
-or within a year of discharge. This analysis uses data from both sources
-to adjust the total number of deaths to include these additional deaths.
-
-The functions in this section load each of the raw datasets when called.
 
 ### NDTMS-ONS linked dataset deaths
 
@@ -1038,6 +1041,8 @@ get_merged_national_data <- function() {
 }
 ```
 
+#### Plots the count of deaths associated with drugs and alcohol
+
 ``` r
 # This function plots all deaths (both alcohol and drug-related) in a single stacked bar.
 # It:
@@ -1400,43 +1405,40 @@ plot_substance_use_yll_estimate()
 
 ## Version information
 
-    ## R version 4.4.2 (2024-10-31 ucrt)
-    ## Platform: x86_64-w64-mingw32/x64
+    ## R version 4.2.1 (2022-06-23 ucrt)
+    ## Platform: x86_64-w64-mingw32/x64 (64-bit)
     ## Running under: Windows 10 x64 (build 19045)
     ## 
     ## Matrix products: default
     ## 
-    ## 
     ## locale:
     ## [1] LC_COLLATE=English_United Kingdom.utf8 
-    ## [2] LC_CTYPE=English_United Kingdom.utf8   
+    ## [2] LC_CTYPE=en_GB.UTF-8                   
     ## [3] LC_MONETARY=English_United Kingdom.utf8
     ## [4] LC_NUMERIC=C                           
     ## [5] LC_TIME=English_United Kingdom.utf8    
-    ## 
-    ## time zone: Europe/London
-    ## tzcode source: internal
     ## 
     ## attached base packages:
     ## [1] stats     graphics  grDevices utils     datasets  methods   base     
     ## 
     ## other attached packages:
-    ## [1] scales_1.3.0     glue_1.8.0       tidyr_1.3.1      arrow_17.0.0.1  
-    ## [5] stringr_1.5.1    openxlsx_4.2.7.1 janitor_2.2.0    ggplot2_3.5.1   
+    ## [1] scales_1.3.0     glue_1.6.2       tidyr_1.3.0      arrow_14.0.0    
+    ## [5] stringr_1.5.1    openxlsx_4.2.5.2 janitor_2.2.0    ggplot2_3.5.0   
     ## [9] dplyr_1.1.4     
     ## 
     ## loaded via a namespace (and not attached):
-    ##  [1] utf8_1.2.4        generics_0.1.3    stringi_1.8.4     digest_0.6.37    
-    ##  [5] magrittr_2.0.3    evaluate_1.0.1    grid_4.4.2        timechange_0.3.0 
-    ##  [9] fastmap_1.2.0     zip_2.3.1         purrr_1.0.2       fansi_1.0.6      
-    ## [13] cli_3.6.3         rlang_1.1.4       bit64_4.5.2       munsell_0.5.1    
-    ## [17] withr_3.0.2       yaml_2.3.10       tools_4.4.2       tzdb_0.4.0       
-    ## [21] colorspace_2.1-1  forcats_1.0.0     assertthat_0.2.1  vctrs_0.6.5      
-    ## [25] R6_2.5.1          lifecycle_1.0.4   lubridate_1.9.3   snakecase_0.11.1 
-    ## [29] bit_4.5.0         pkgconfig_2.0.3   pillar_1.9.0      gtable_0.3.6     
-    ## [33] Rcpp_1.0.13-1     xfun_0.49         tibble_3.2.1      tidyselect_1.2.1 
-    ## [37] rstudioapi_0.17.1 knitr_1.49        farver_2.1.2      htmltools_0.5.8.1
-    ## [41] rmarkdown_2.29    ggsci_3.2.0       labeling_0.4.3    compiler_4.4.2
+    ##  [1] zip_2.3.0         Rcpp_1.0.11       highr_0.11        pillar_1.9.0     
+    ##  [5] compiler_4.2.1    forcats_1.0.0     tools_4.2.1       bit_4.0.5        
+    ##  [9] digest_0.6.33     lubridate_1.9.3   evaluate_0.24.0   lifecycle_1.0.4  
+    ## [13] tibble_3.2.1      gtable_0.3.5      timechange_0.2.0  pkgconfig_2.0.3  
+    ## [17] rlang_1.1.2       ggsci_3.0.0       cli_3.6.1         rstudioapi_0.15.0
+    ## [21] yaml_2.3.8        xfun_0.43         fastmap_1.1.1     withr_3.0.1      
+    ## [25] knitr_1.45        generics_0.1.3    vctrs_0.6.4       bit64_4.0.5      
+    ## [29] grid_4.2.1        tidyselect_1.2.1  snakecase_0.11.1  R6_2.5.1         
+    ## [33] fansi_1.0.5       rmarkdown_2.27    farver_2.1.1      tzdb_0.4.0       
+    ## [37] purrr_1.0.2       magrittr_2.0.3    htmltools_0.5.8.1 assertthat_0.2.1 
+    ## [41] colorspace_2.0-3  labeling_0.4.3    utf8_1.2.4        stringi_1.8.1    
+    ## [45] munsell_0.5.1
 
 [^1]: Chudasama, Y.V., Khunti, K., Gillies, C.L., Dhalwani, N.N.,
     Davies, M.J., Yates, T., & Zaccardi, F. (2022). Estimates of years

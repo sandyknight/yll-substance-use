@@ -1,49 +1,29 @@
 ---
-title: "README"
+title: "Years of life lost due to substance misuse"
+author: "Sandy Knight"
+date: "2024-12-07"
 output: 
-  github_document:
-      toc: true
+  html_document:
+    theme: darkly
+    toc: yes
+    toc_float:
+      collapsed: true
 ---
 
 ## Required packages
 
-```{r, warning=FALSE, message=FALSE}
+```{r setup-packages, warning=FALSE, message=FALSE}
 library(dplyr)
 library(ggplot2)
 library(janitor)
 library(openxlsx)
 library(stringr)
-library(arrow) 
+library(arrow)
 library(tidyr)
 library(glue)
 library(scales)
 ```
 
-## Set-up
-
-Two of the datasets used in the analysis aren't publicly available, so I've not uploaded the `data `directory here. To get the analysis working you'll have to add the two original data files with this structure:
-```
-├── data
-│   └── raw
-│       ├── post election data for Jon- sent.xlsx
-│       └── table1_all deaths_Cocaine version 1.xlsx
-```
-Clone or download this repository
-Add the data files and directory structure
-
-I've included the session info with R and package versions at the end to help with any compatability issues.
-
-## Getting the data
-
-Each of these functions take no arguments and return a raw dataset when called.
-
-### Drug poisoning data
-
-The functions in this section load each of the raw datasets when called.
-
-### NDTMS-ONS linked dataset deaths
-
-Drug poisoning deaths from the NDTMS-ONS data linkage. This function loads the required data from an Excel workbook received by email from EAT with the name `table1_all deaths_Cocaine version 1.xlsx`. Since loading data this large from Excel takes a long time it is saved as a parquet file to speed up later analysis. If this is already done the function does nothing. Note that this is not publicly available data.  
 
 ## Source files
 
@@ -59,25 +39,34 @@ source("R/dhsc_colour_palette.R")
 
 Each of these functions take no arguments and return a raw dataset when called.
 
+### Drug poisoning data
+
+The ONS publishes drug poisonings and classifies them as "related to drug misuse" given certain criteria i.e. specific ICD-10 codes on the death record. 
+
+The linkage of NDTMS and ONS data reveals that some deaths that had insufficient information for the ONS to apply this classification are probably related to drug misuse since they occured either in treatment or within a year of discharge. This analysis uses data from both sources to adjust the total number of deaths to include these additional deaths.
+
+The functions in this section load each of the raw datasets when called.
+
 ### NDTMS-ONS linked dataset deaths
 
 Drug poisoning deaths from the NDTMS-ONS data linkage. This function loads the required data from an Excel workbook received by email from EAT with the name `table1_all deaths_Cocaine version 1.xlsx`. Since loading data this large from Excel takes a long time it is saved as a parquet file to speed up later analysis. If this is already done the function does nothing. Note that this is not publicly available data.  
 
 ```{r function-get_drug_deaths}
-get_drug_poisoning_deaths <- function() {
-  if (!file.exists("data/raw/ndtms_mortality_data.parquet")) {
-    #  This file is NDTMS-ONS data linkage; received by email from Stefan and
-    #  named: "table1_all deaths_Cocaine version 1.xlsx"
-
-    df <- # Load deaths data from Excel
-      openxlsx::read.xlsx("data/raw/table1_all deaths_Cocaine version 1.xlsx",
-        sheet = "table1_all deaths"
-      )
-    # Write data to easier format
-    write_parquet(df, "data/raw/ndtms_mortality_data.parquet")
-  }
+get_drug_poisoning_deaths <- function(){ 
+if (!file.exists("data/raw/ndtms_mortality_data.parquet")) {
+  #  This file is NDTMS-ONS data linkage; received by email from Stefan and
+  #  named: "table1_all deaths_Cocaine version 1.xlsx"
+  
+  df <- # Load deaths data from Excel
+    openxlsx::read.xlsx("data/raw/table1_all deaths_Cocaine version 1.xlsx",
+                        sheet = "table1_all deaths")
+  # Write data to easier format
+  write_parquet(df, "data/raw/ndtms_mortality_data.parquet")
+  
+}
   # Return raw data
   read_parquet("data/raw/ndtms_mortality_data.parquet")
+
 }
 ```
 
@@ -86,53 +75,55 @@ get_drug_poisoning_deaths <- function() {
 The ONS drug poisoning data is publicly available at the URI in this function. This function downloads, reshapes, and returns the relevant ONS data.
 
 ```{r function-get_ons_drug_poisoning_data} 
-get_ons_drug_poisoning_data <-
-  function() {
-    url <- "https://www.ons.gov.uk/file?uri=/peoplepopulationandcommunity/birthsdeathsandmarriages/deaths/datasets/deathsrelatedtodrugpoisoningenglandandwalesreferencetable/current/2023registrations.xlsx"
+get_ons_drug_poisoning_data  <- 
+function(){
+url <- "https://www.ons.gov.uk/file?uri=/peoplepopulationandcommunity/birthsdeathsandmarriages/deaths/datasets/deathsrelatedtodrugpoisoningenglandandwalesreferencetable/current/2023registrations.xlsx"
 
-    ons_registrations <-
-      openxlsx::read.xlsx(
-        url,
-        sheet = "Table 1",
-        startRow = 4,
-        sep.names = "_",
-        fillMergedCells = TRUE,
-        skipEmptyCols = TRUE,
-        check.names = TRUE
-      ) |>
-      select(1, 2, 5, 9)
+ons_registrations <-
+  openxlsx::read.xlsx(
+    url,
+    sheet = "Table 1",
+    startRow = 4,
+    sep.names = "_",
+    fillMergedCells = TRUE,
+    skipEmptyCols = TRUE,
+    check.names = TRUE
+  ) |> 
+  select(1,2,5,9)
 
-    colnames(ons_registrations) <- c("sex", "year", "all_drug_poisoning", "drug_misuse")
+colnames(ons_registrations) <- c("sex", "year", "all_drug_poisoning", "drug_misuse")
 
-    ons_registrations <-
-      ons_registrations |>
-      slice(3:100) |>
-      mutate(sex = zoo::na.locf(sex)) |>
-      filter(sex == "Persons") |>
-      as_tibble() |>
-      filter(!is.na(year))
+ons_registrations <- 
+ons_registrations |> 
+  slice(3:100) |> 
+  mutate(sex = zoo::na.locf(sex)) |> 
+  filter(sex == "Persons") |> 
+  as_tibble() |> 
+  filter(!is.na(year))
 
-    return(ons_registrations)
-  }
+return(ons_registrations)
+}
 ```
 
 ### Non-poisoning deaths of people with contact with the treatment system
 
 The NDTMS-ONS data linkage also has records for people who died in treatment or after treatment from causes other than drug poisoning. This analysis adds those deaths to either drug- or -alcohol related deaths depending on the cause and, in the case of those people in treatment for drug use, time since discharge. 
 
-The treatment mortality data was received by email from EAT, (*received: 2024-07-08 from CA*) and named `post election data for Jon- sent.xlsx`. This data is not publicly available.
+The treatment mortality data was received by email from EAT,(*received: 2024-07-08 from CA*) and named `post election data for Jon- sent.xlsx`. This data is not publicly available.
 
 ```{r, function-get_non_poisoning_deaths}
-get_non_poisoning_deaths <- function() {
-  np_deaths <-
-    openxlsx::read.xlsx("data/raw/post election data for Jon- sent.xlsx", sheet = "NDTMS_ONS") |>
-    janitor::clean_names()
 
-  np_deaths <-
-    np_deaths |>
-    filter(geography == "LA")
+get_non_poisoning_deaths <- function(){
+np_deaths <- 
+  openxlsx::read.xlsx("data/raw/post election data for Jon- sent.xlsx", sheet = "NDTMS_ONS") |> 
+  janitor::clean_names()
 
-  return(np_deaths)
+np_deaths <- 
+np_deaths |> 
+  filter(geography == "LA")
+
+return(np_deaths )
+  
 }
 ```
 
@@ -141,24 +132,24 @@ get_non_poisoning_deaths <- function() {
 The ONS alcohol-specific death data is publicly available at the URI in this function. This function downloads, reshapes, and returns the relevant ONS data.
 
 ```{r function-get_ons_alcohol_specific_death_data}
-get_ons_alcohol_specific_death_data <-
-  function() {
-    url <-
-      "https://www.ons.gov.uk/file?uri=/peoplepopulationandcommunity/healthandsocialcare/causesofdeath/datasets/alcoholspecificdeathsbysexagegroupandindividualcauseofdeath/current/deathsbyindividualcause.xlsx"
+get_ons_alcohol_specific_death_data <- 
+  function(){
+    
+url <- 
+  "https://www.ons.gov.uk/file?uri=/peoplepopulationandcommunity/healthandsocialcare/causesofdeath/datasets/alcoholspecificdeathsbysexagegroupandindividualcauseofdeath/current/deathsbyindividualcause.xlsx"
 
-    alc_specific_deaths <-
-      read.xlsx(
-        xlsxFile = url, rows = c(5:50), cols = c(1:24), colNames = TRUE, sheet = "Table 2"
-      ) %>%
-      rename_with(.fn = janitor::make_clean_names, .cols = 1:4) |>
-      rename("period" = year_note_3) %>%
-      filter(sex != "Persons") |>
-      tidyr::pivot_longer(cols = `<1`:`90+`, names_to = "age_group", values_to = "count") |>
-      group_by(sex, age_group) |>
-      summarise(count = sum(count), .groups = "drop")
-
-    return(alc_specific_deaths)
-  }
+alc_specific_deaths <- 
+read.xlsx(
+  xlsxFile = url, rows = c(5:50), cols = c(1:24),colNames = TRUE, sheet = "Table 2") %>% 
+  rename_with(.fn = janitor::make_clean_names, .cols = 1:4)  |> 
+  rename("period" = year_note_3) %>% 
+  filter(sex != "Persons") |> 
+  tidyr::pivot_longer(cols = `<1`:`90+`, names_to = "age_group", values_to = "count") |> 
+  group_by(sex, age_group) |> 
+  summarise(count = sum(count), .groups = "drop")
+ 
+return(alc_specific_deaths)
+}
 ```
 
 ### Life expectancy
@@ -167,57 +158,61 @@ This function downloads, re-labels, and reshapes the ONS life tables for use in 
 
 ```{r function-get_life_tables}
 get_life_tables <- function() {
-  url <- "https://www.ons.gov.uk/file?uri=/peoplepopulationandcommunity/birthsdeathsandmarriages/lifeexpectancies/datasets/nationallifetablesunitedkingdomreferencetables/current/nltuk198020203.xlsx"
-
-  life_tables <-
-    read.xlsx(
-      xlsxFile = url,
-      sheet = "2020-2022",
-      startRow = 6
-    ) |>
-    rename_with(.cols = 1:6, ~ paste0(.x, "_male")) |>
-    rename_with(.cols = 7:12, ~ paste0(.x, "_female")) |>
-    select(ex_male, age_female, ex_female) |>
-    pivot_longer(cols = contains("ex"), values_to = "ex", names_to = "sex") |>
-    mutate(sex = str_remove(sex, "ex_")) |>
-    rename("age" = age_female)
-
-  return(life_tables)
+    url <- "https://www.ons.gov.uk/file?uri=/peoplepopulationandcommunity/birthsdeathsandmarriages/lifeexpectancies/datasets/nationallifetablesunitedkingdomreferencetables/current/nltuk198020203.xlsx"
+    
+    life_tables <- 
+        read.xlsx(
+        xlsxFile = url,
+        sheet = "2020-2022",
+        startRow = 6
+      ) |>
+        rename_with(.cols = 1:6, ~paste0(.x, "_male")) |>
+        rename_with(.cols = 7:12, ~paste0(.x, "_female")) |>
+        select(ex_male, age_female, ex_female) |>
+        pivot_longer(cols = contains("ex"), values_to = "ex", names_to = "sex") |>
+        mutate(sex = str_remove(sex, "ex_")) |> 
+        rename("age" = age_female)
+    
+    return(life_tables)
 }
+
 ```
 
 ## Data processing and preparation
 
 ### Drug deaths
 
-The following two functions were written to allow other analyses of drug deaths and have more flexibilty (and therefore are unfortunately long and complicated) than is necessary for the YLL analysis. They should both take the output of the corresponding `get_*_data()` functions as the `data` argument. For this analysis we'll choose to group the data by age and sex, and use date of occurrence rather than registration. 
+The following two functions were written to allow other analyses of drug deaths and have more flexibilty (and therefore are unfortunately long and complicated) than is necessary for the YLL analysis. They should both take the output of the corresponding `get_*_data()` functions as the `data` argument. For this analysis we'll choose to group the data by age and sex, and use date of occurrence rater than registration. 
 
 ```{r function-process_drug_poisoning_deaths}
+
 #' Process drug poisoning data
-#'
-#' Reads, cleans, and processes drug poisoning data from a file. Filters and groups the data
+#' 
+#' Reads, cleans, and processes drug poisoning data from a file. Filters and groups the data 
 #' based on user-defined parameters, such as years, date type, and grouping.
 #'
 #' @param file_path Path to the parquet file containing drug poisoning data.
 #' @param date_of Either "occurrence" (year of death) or "registration" (year of registration).
 #' @param years Vector of years to include in the analysis.
 #' @param by Grouping variable: "area", "age", or NULL (national-level data).
-#' @param by_sex Whether to group by sex
+#' @param by_sex Whether to group by sex 
 #' @return A tibble with grouped and summarized poisoning data.
 process_poisoning_data <- function(data, date_of = "occurrence", years = c(2022, 2023), by = NULL, by_sex = FALSE) {
   if (is.null(by)) {
     message(paste("Drug poisoning: national level data, all ages", years, sep = ", "))
   }
   # Decide which date variable to use
-  date_of_var <- switch(date_of,
+  date_of_var <- switch(
+    date_of,
     "occurrence" = "dod_year",
     "registration" = "reg_year",
     stop("Only 'occurrence' or 'registration' are valid options!")
   )
-
+  
   # Handle grouping variable(s)
   if (!is.null(by)) {
-    by_var <- switch(by,
+    by_var <- switch(
+      by,
       "area" = c("dat", "dat_nm"),
       "age" = "ageinyrs",
       stop("Invalid 'by' value. Use 'area', 'age', or leave as NULL.")
@@ -225,16 +220,16 @@ process_poisoning_data <- function(data, date_of = "occurrence", years = c(2022,
   } else {
     by_var <- NULL
   }
-
-  if (isTRUE(by_sex)) {
-    by_vars <- c(by_var, "sex")
-  } else {
-    by_vars <- by_var
-  }
-
+ 
+ if (isTRUE(by_sex)){
+   by_vars <- c(by_var, "sex")
+ } else {
+   by_vars <- by_var
+ }
+   
   # Read and process data
-  result <-
-    data %>%
+  result <- 
+  data %>%
     janitor::clean_names() %>%
     mutate(
       ndtms_match = if_else(
@@ -250,13 +245,13 @@ process_poisoning_data <- function(data, date_of = "occurrence", years = c(2022,
     ) %>%
     filter(
       # 'Total Deaths' only, not by substance. NB the substance groups are not mutually exclusive
-      drug_group == "Total Deaths",
+      drug_group == "Total Deaths", 
       # Year of occurrence OR registration as selected in the parameters
-      .data[[date_of_var]] %in% years
+      .data[[date_of_var]] %in% years 
     ) %>%
     filter(
       # Retain rows that were recoreded as drug misuse OR not recorded as drug misuse but have a record of contact with the treatment system
-      drug_misuse_combined == 1 | (drug_misuse_combined == 0 & treatment_status != "no match with NDTMS")
+      drug_misuse_combined == 1 | (drug_misuse_combined == 0 & treatment_status != "no match with NDTMS") 
     ) %>%
     mutate(
       additional_poisoning_deaths = if_else(
@@ -275,20 +270,22 @@ process_poisoning_data <- function(data, date_of = "occurrence", years = c(2022,
       count = n(),
       .groups = "drop"
     )
-
-  if (isTRUE(by_sex)) {
-    result <-
-      result |>
-      mutate(sex = case_match(sex, "M" ~ "male", "F" ~ "female"))
-  }
-
+ 
+    if (isTRUE(by_sex)) {
+    result <- 
+      result |> 
+      mutate(sex = case_match(sex,"M" ~ "male", "F" ~ "female"))
+    }
+  
   return(result)
+   
 }
 ```
 
 ```{r function-process_non_poisoning_deaths}
+
 #' Process deaths in treatment data
-#'
+#' 
 #' Reads and processes data about deaths in treatment. Filters, groups, and summarizes the data
 #' based on various parameters.
 #'
@@ -297,7 +294,7 @@ process_poisoning_data <- function(data, date_of = "occurrence", years = c(2022,
 #' @param by Grouping variable: "area", "age", or NULL.
 #' @param by_treatment_status Whether to group by treatment status.
 #' @param by_death_cause Whether to group by cause of death.
-#' @param by_sex Whether to group by sex
+#' @param by_sex Whether to group by sex 
 #' @param exclude_poisoning Whether to exclude drug poisoning deaths.
 #' @param exclude_alcohol_specific_deaths Whether to exclude alcohol-specific deaths.
 #' @return A tibble with grouped and summarized treatment data.
@@ -308,71 +305,73 @@ process_deaths_in_treatment <- function(data,
                                         by_death_cause = FALSE,
                                         by_sex = FALSE,
                                         exclude_poisoning = TRUE,
-                                        exclude_alcohol_specific_deaths = TRUE) {
+                                        exclude_alcohol_specific_deaths = TRUE
+) {
   # Start with grouping variable
   grouping_vars <- "period"
-
+  
   # Handle additional grouping by 'by' parameter
   if (!is.null(by)) {
     by_vars <- switch(by,
-      "area" = c("area_code", "area_name"),
-      "age" = "age",
-      stop("Invalid 'by' value. Choose 'area' or 'age', or leave as NULL.")
+                      "area" = c("area_code", "area_name"),
+                      "age" = "age",
+                      stop("Invalid 'by' value. Choose 'area' or 'age', or leave as NULL.")
     )
     grouping_vars <- c(grouping_vars, by_vars)
   }
-
+  
   # Add grouping for treatment status or death cause if requested
   if (isTRUE(by_treatment_status)) {
     grouping_vars <- c(grouping_vars, "treatment_status")
   }
-
+  
   if (isTRUE(by_death_cause)) {
     grouping_vars <- c(grouping_vars, "death_cause")
   }
 
-  if (isTRUE(by_sex)) {
+ if (isTRUE(by_sex)) {
     grouping_vars <- c(grouping_vars, "sex")
   }
-
-
+  
+    
   # Read and process data
   data <- data %>%
-    mutate( # Deal with Excel date madness
+    mutate(    # Deal with Excel date madness
       period = as.Date(period, origin = "1899-12-30"),
       period = lubridate::year(period)
     )
-
+  
   # Apply filters
   data <- data %>%
     filter(period %in% years)
-
+  
   if (isTRUE(exclude_poisoning)) {
     data <- data %>%
       filter(death_cause != "Drug poisoning")
   }
-
+  
   if (isTRUE(exclude_alcohol_specific_deaths)) {
     data <- data %>%
       filter(death_cause != "Alcohol-specific death")
   }
-
+  
   # Group and summarize
   result <- data %>%
     group_by(across(all_of(grouping_vars))) %>%
     summarise(count = sum(count), .groups = "drop")
 
-  # If grouped by sex column, standardise sex coding
-
+  # If grouped by sex column, standardise sex coding  
+   
   if (isTRUE(by_sex)) {
-    result <-
-      result |>
+    result <- 
+    result |> 
       mutate(sex = tolower(sex))
   }
-
-
+  
+   
   return(result)
 }
+
 ```
 
 ### Alcohol deaths
@@ -383,11 +382,14 @@ This function extracts:
 from the output of `get_non_poisoning_deaths()`
 
 ```{r}
-get_alcohol_specific_deaths_from_tx <- function(data) {
-  data |>
-    filter(drug_group == "alcohol only" | death_cause == "Alcohol-specific death") |>
-    filter(treatment_status != "Died one or more years following discharge")
+
+get_alcohol_specific_deaths_from_tx <- function(data){
+data |> 
+  filter(drug_group == "alcohol only"|death_cause == "Alcohol-specific death") |> 
+  filter(treatment_status != "Died one or more years following discharge")
+  
 }
+
 ```
 
 ### Age group parsing
@@ -400,35 +402,35 @@ parse_age_groups <- function(age_groups) {
   # Patterns for age group formats
   pattern_range <- "^([0-9]+)-([0-9]+)$"
   pattern_under <- "^<([0-9]+)$"
-  pattern_over <- "^([0-9]+)\\+$"
-
+  pattern_over  <- "^([0-9]+)\\+$"
+  
   # Initialize vectors
   lower <- rep(NA_real_, length(age_groups))
   upper <- rep(NA_real_, length(age_groups))
-
+  
   # Identify which pattern each age group matches
   is_range <- grepl(pattern_range, age_groups)
   is_under <- grepl(pattern_under, age_groups)
-  is_over <- grepl(pattern_over, age_groups)
-
-  # For range: extract lower and upper numbers
+  is_over  <- grepl(pattern_over, age_groups)
+  
+  # For range: extract lower and upper numbers 
   if (any(is_range)) {
     lower[is_range] <- as.numeric(sub(pattern_range, "\\1", age_groups[is_range]))
-    upper[is_range] <- as.numeric(sub(pattern_range, "\\2", age_groups[is_range]))
+    upper[is_range] <- as.numeric(sub(pattern_range, "\\2", age_groups[is_range])) 
   }
-
+  
   # For under: "<X" means lower = -Inf, upper = X
   if (any(is_under)) {
     upper[is_under] <- as.numeric(sub(pattern_under, "\\1", age_groups[is_under]))
     lower[is_under] <- -Inf
   }
-
+  
   # For over: "X+" means lower = X, upper = Inf
   if (any(is_over)) {
     lower[is_over] <- as.numeric(sub(pattern_over, "\\1", age_groups[is_over]))
     upper[is_over] <- Inf
   }
-
+  
   # Create and return a data frame
   data.frame(
     age_group = age_groups,
@@ -437,6 +439,8 @@ parse_age_groups <- function(age_groups) {
     stringsAsFactors = FALSE
   )
 }
+
+
 ```
 
 ```{r function-assign_age_group}
@@ -444,15 +448,18 @@ parse_age_groups <- function(age_groups) {
 assign_age_group <- function(ages, age_df) {
   # We assume ages is already an integer vector
   age_groups <- character(length(ages))
-
+  
   # Assign age groups based on intervals
   for (i in seq_len(nrow(age_df))) {
     in_interval <- ages >= age_df$lower[i] & ages <= age_df$upper[i]
     age_groups[in_interval] <- age_df$age_group[i]
   }
-
+  
   return(age_groups)
 }
+
+
+
 ```
 
 
@@ -464,47 +471,51 @@ merge_drug_deaths <- function() {
   poisoning_deaths_by_age <-
     process_poisoning_data(
       data = get_drug_poisoning_deaths(), # Fetch raw drug poisoning death data
-      date_of = "occurrence", # Use date of occurrence (not registration date)
-      years = 2022, # Only include data for the year 2022
-      by = "age", # Aggregate results by age
-      by_sex = TRUE # Also stratify by sex
-    ) |>
-    rename("age" = ageinyrs) |> # Rename age variable
-    group_by(age, sex) |> # Group by age and sex
+      date_of = "occurrence",             # Use date of occurrence (not registration date)
+      years = 2022,                       # Only include data for the year 2022
+      by = "age",                         # Aggregate results by age
+      by_sex = TRUE                       # Also stratify by sex
+    ) |> 
+    rename("age" = ageinyrs) |>           # Rename age variable 
+    group_by(age, sex) |>                 # Group by age and sex
     summarise(count = sum(count), .groups = "drop") # Summarise total counts and ungroup
 
   # Process and aggregate non-poisoning deaths that occur during treatment, by age and sex, for the same year
   non_poisoning_deaths_by_age <-
     process_deaths_in_treatment(
-      data = get_non_poisoning_deaths(), # Fetch non-poisoning death data
-      years = 2022, # Only include data for the year 2022
-      by = "age", # Aggregate results by age
-      exclude_poisoning = TRUE, # Ensure we exclude poisoning deaths
-      by_treatment_status = TRUE, # Consider treatment status categories
-      by_death_cause = FALSE, # Do not break down by specific cause of death
-      by_sex = TRUE, # Stratify by sex
+      data = get_non_poisoning_deaths(),    # Fetch non-poisoning death data
+      years = 2022,                         # Only include data for the year 2022
+      by = "age",                           # Aggregate results by age
+      exclude_poisoning = TRUE,             # Ensure we exclude poisoning deaths
+      by_treatment_status = TRUE,           # Consider treatment status categories
+      by_death_cause = FALSE,               # Do not break down by specific cause of death
+      by_sex = TRUE,                        # Stratify by sex
       exclude_alcohol_specific_deaths = TRUE # Exclude alcohol-specific deaths
     ) |>
     filter(treatment_status != "Died one or more years following discharge") |> # Filter out deaths occurring more than a year post-discharge
-    group_by(age, sex) |> # Group by age and sex
+    group_by(age, sex) |>                   # Group by age and sex
     summarise(count = sum(count), .groups = "drop") # Summarise total counts and ungroup
 
   # Combine poisoning and non-poisoning deaths together, then aggregate by age and sex
   deaths_by_age <-
     bind_rows(
-      poisoning_deaths_by_age, # Add the poisoning deaths
+      poisoning_deaths_by_age,    # Add the poisoning deaths
       non_poisoning_deaths_by_age # Add the non-poisoning deaths
     ) |>
-    group_by(age, sex) |> # Re-group combined data by age and sex
+    group_by(age, sex) |>         # Re-group combined data by age and sex
     summarise(count = sum(count), .groups = "drop") |> # Sum all counts for each age/sex group
-    mutate(substance = "Drugs") # Add a variable to indicate these deaths are drug-related
+    mutate(substance = "Drugs")   # Add a variable to indicate these deaths are drug-related
 
   # Return the final aggregated data frame
   return(deaths_by_age)
 }
+
+
+
 ```
 
 ```{r function-merge_alcohol_deaths}
+
 merge_alcohol_deaths <- function() {
   # Get ONS alcohol-specific death data
   ons_alc_deaths <- get_ons_alcohol_specific_death_data()
@@ -546,6 +557,8 @@ merge_alcohol_deaths <- function() {
   # Return the final aggregated dataset
   return(alcohol_deaths)
 }
+
+
 ```
 
 ## Counts of aggregate deaths 
@@ -949,7 +962,7 @@ get_merged_national_data <- function() {
 }
 ```
 
-#### Plots the count of deaths associated with drugs and alcohol
+
 
 ```{r function-plot_all_deaths_by_source}
 # This function plots all deaths (both alcohol and drug-related) in a single stacked bar.
@@ -1028,99 +1041,61 @@ Where $D_x$ is the number of deaths in the age group and $e_{x}^s$ is the mean s
 calculate_crude_yll <- function() {
   # Step 1: Merge alcohol-related deaths into a single dataset
   alcohol_deaths <- merge_alcohol_deaths()
-
+  
   # Step 2: Parse the age groups in the alcohol deaths data to get lower and upper bounds
   age_df <- parse_age_groups(pull(alcohol_deaths, age_group))
-
+  
   # Step 3: Retrieve life tables, which contain life expectancy (ex) by sex and age
   life_tables <- get_life_tables()
-
+  
   # Step 4: Calculate years of life lost (YLL) for alcohol-related deaths
-  yll_alcohol <-
-    life_tables |>
+  yll_alcohol <- 
+    life_tables |> 
     # Assign each age in life tables to an age group based on parsed age group bounds
-    mutate(age_group = assign_age_group(ages = age, age_df)) |>
+    mutate(age_group = assign_age_group(ages = age, age_df)) |> 
     # Group by sex and age group and calculate the average life expectancy (ex)
-    group_by(sex, age_group) |>
-    summarise(ex = mean(ex), .groups = "drop") |>
+    group_by(sex, age_group) |> 
+    summarise(ex = mean(ex), .groups = "drop") |> 
     # Merge with alcohol deaths data to match life expectancy with death counts
-    right_join(alcohol_deaths, by = c("sex", "age_group")) |>
+    right_join(alcohol_deaths, by = c("sex", "age_group")) |> 
     # Calculate YLL by multiplying life expectancy (ex) with the number of deaths (count)
-    mutate(yll = ex * count)
-
+    mutate(yll = ex * count) 
+  
   # Step 5: Summarise alcohol-related YLL and death counts by age group and substance
-  yll_alcohol <-
-    yll_alcohol |>
-    group_by(age_group, substance) |>
+  yll_alcohol <- 
+    yll_alcohol |> 
+    group_by(age_group, substance) |> 
     summarise(count = sum(count), yll = sum(yll), .groups = "drop")
-
+  
   # Step 6: Merge drug-related deaths into a single dataset
   drug_deaths <- merge_drug_deaths()
-
+  
   # Step 7: Calculate YLL for drug-related deaths
-  yll_drugs <-
+  yll_drugs <- 
     left_join(
-      drug_deaths, # Join drug deaths data
-      life_tables, # With life tables to get life expectancy (ex) by sex and age
+      drug_deaths,  # Join drug deaths data
+      life_tables,  # With life tables to get life expectancy (ex) by sex and age
       by = c("sex", "age")
-    ) |>
+    ) |> 
     # Calculate YLL by multiplying life expectancy (ex) with the number of deaths (count)
     mutate(yll = count * ex)
-
+  
   # Step 8: Re-parse the age groups in the summarised alcohol YLL data
   age_df <- parse_age_groups(pull(yll_alcohol, age_group))
-
+  
   # Step 9: Assign each age in drug YLL data to an age group based on parsed age group bounds
-  yll_drugs <-
-    mutate(yll_drugs, age_group = assign_age_group(age, age_df)) |>
+  yll_drugs <- 
+    mutate(yll_drugs, age_group = assign_age_group(age, age_df)) |> 
     # Summarise drug-related YLL and death counts by age group and substance
-    group_by(age_group, substance) |>
+    group_by(age_group, substance) |> 
     summarise(count = sum(count), yll = sum(yll), .groups = "drop")
-
+  
   # Step 10: Combine alcohol-related and drug-related YLL into a single dataset
   yll <- bind_rows(yll_alcohol, yll_drugs)
-
+  
   # Step 11: Return the combined dataset
   return(yll)
 }
-```
-
-### Plot crude estimate
-
-Produces a plot of the crude YLL estimate. Sources two scripts that define `ggplot2` aesthetics but don't contibute to the analysis.
-
-
-```{r function-plot_crude_yll_estimate, message=FALSE}
-plot_crude_yll_estimate <- 
-  function(){
-source("R/dhsc_colour_palette.R")
-source("R/themes.R")
-crude_yll <-
-  calculate_crude_yll()
-
-    p <-
-      crude_yll |>
-      ggplot(aes(x = age_group, y = yll)) +
-      geom_col(aes(fill = substance), colour = "black") +
-      scale_y_continuous(labels = scales::comma) +
-      labs(
-        title = "Estimated years of life lost (YLL), due to substance use",
-        subtitle = glue::glue("Total YLL: {scales::comma(sum(crude_yll$yll))} (without discounting or age weighting)"),
-        caption = "Data from ONS and NDTMS for deaths which occurred in 2022",
-        fill = NULL,
-        x = "Age group",
-        y = "YLL"
-      ) +
-      my_theme +
-      my_fill_scale +
-      theme(
-        axis.text.x = element_text(angle = 30, vjust = 0.5),
-        legend.direction = "horizontal",
-        plot.caption = element_text(face = "italic")
-      )
-
-    return(p)
-  }
 
 ```
 
@@ -1231,7 +1206,42 @@ calculate_substance_use_yll <- function() {
 }
 
 ```
+  
+#### Produces a plot of the crude YLL estimate
 
+```{r function-plot_crude_yll_estimate, message=FALSE}
+plot_crude_yll_estimate <- 
+  function(){
+source("R/dhsc_colour_palette.R")
+source("R/themes.R")
+crude_yll <-
+  calculate_crude_yll()
+
+p <- 
+crude_yll  |> 
+  ggplot(aes(x = age_group, y = yll)) +
+  geom_col(aes(fill = substance), colour = "black") +
+  scale_y_continuous(labels = scales::comma) +
+  labs(
+    title = "Estimated years of life lost (YLL), due to substance use",
+    subtitle = glue::glue("Total YLL: {scales::comma(sum(crude_yll$yll))} (without discounting or age weighting)"),
+    caption = "Data from ONS and NDTMS for deaths which occurred in 2022",
+    fill = NULL,
+    x = "Age group",
+    y = "YLL"
+       ) +
+  my_theme + my_fill_scale +
+  theme(
+    axis.text.x = element_text(angle = 30, vjust = 0.5),
+    legend.direction = "horizontal",
+    plot.caption = element_text(face = "italic")
+      )
+  
+return(p)
+  }
+
+
+```
 
 #### Produces a similar plot for the discounted and age-weighted YLL estimate
 
@@ -1270,6 +1280,7 @@ plot_substance_use_yll_estimate <-
 
 ```
 
+
 ## Plotting results
 
 ### Plot count of drug deaths
@@ -1306,16 +1317,8 @@ plot_substance_use_yll_estimate()
 
 
 
-
 [^1]: Chudasama, Y.V., Khunti, K., Gillies, C.L., Dhalwani, N.N., Davies, M.J., Yates, T., & Zaccardi, F. (2022). Estimates of years of life lost depended on the method used: tutorial and comparative investigation. *Journal of Clinical Epidemiology*, 150, pp. 42–50. Available at: [https://doi.org/10.1016/j.jclinepi.2022.06.012](https://doi.org/10.1016/j.jclinepi.2022.06.012) [Accessed 6 Nov. 2024].
 
 [^2]:Aragón, T.J., Lichtensztajn, D.Y., Katcher, B.S., Reiter, R. and Katz, M.H., 2007. Calculating Expected Years of Life Lost to Rank the Leading Causes of Premature Death in San Francisco. *San Francisco Department of Public Health*.
 
 [^3]:Murray, C.J., Lopez, A.D. and Jamison, D.T., 1994. The global burden of disease in 1990: summary results, sensitivity analysis and future directions. *Bulletin of the world health organization*, 72(3), p.495.
-
-## Version information
-
-```{r, echo=FALSE}
-info <- sessionInfo()
-print(info)
-```
