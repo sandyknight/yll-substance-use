@@ -3,10 +3,6 @@ function(){
 
 if (file.exists("data/processed/ons_leading_mortality_causes.csv")){
 
-readr::read_csv("data/processed/ons_leading_mortality_causes.csv")
-
-} else {
-
 ons_leading_mortality_causes <-
 read.xlsx(
   xlsxFile = "https://www.ons.gov.uk/file?uri=/peoplepopulationandcommunity/birthsdeathsandmarriages/deaths/datasets/deathsregisteredinenglandandwalesseriesdrreferencetables/2022/dr2022corrected.xlsx",
@@ -16,9 +12,7 @@ read.xlsx(
   as_tibble() |>
   mutate(percentage_of_all_deaths_percent = percentage_of_all_deaths_percent / 100)
 
-readr::write_csv(ons_leading_mortality_causes, "data/processed/ons_leading_mortality_causes.csv")
-
-readr::read_csv("data/processed/ons_leading_mortality_causes.csv")
+return(ons_leading_mortality_causes)
 }
 }
 
@@ -114,11 +108,8 @@ leading_cause_mortality_comparison |>
   group_split()
 
 
-data <- leading_cause_mortality_comparison[[1]]
 
-
-
-plot_leading_cause_comparison <- function(data, substance = "both"){
+prepare_leading_cause_data <- function(data, substance){
 
 causes <-
    pull(filter(data, !str_detect(leading_cause, "drug|alcohol")), leading_cause)
@@ -148,11 +139,21 @@ if (substance == "combined") {
     data |>
       filter(leading_cause %in% c(substance, causes))
 
-
+return(data)
 
 }
+}
 
+iterate_data_preparation <- function(substance) {
+lapply(leading_cause_mortality_comparison, function(data) prepare_leading_cause_data(data = data, substance = substance))
+}
 
+leading_cause_mortality_comparison <-
+lapply(X = c("drugs", "alcohol", "both", "combined"), FUN = iterate_data_preparation)  |>
+  unlist(recursive = FALSE)
+
+plot_leading_cause_comparison <-
+  function(data) {
 data |>
   arrange(count) |>
   mutate(leading_cause = forcats::as_factor(leading_cause)) |>
@@ -166,16 +167,10 @@ data |>
 
 }
 
-plot_leading_cause_comparison(data = leading_cause_mortality_comparison[[1]], substance = "combined")
+
 
 lc_plots <- lapply(leading_cause_mortality_comparison, plot_leading_cause_comparison)
 
-outer(plot_leading_cause_comparison, data = leading_cause_mortality_comparison, substance = c("drugs", "alcohol", "both", "combined"))
-
-  purrr::map2(.x = leading_cause_mortality_comparison, .y = c("drugs", "alcohol", "both", "combined"), .f = plot_leading_cause_comparison)
-
-
-lc_plots[[1]]
 
 cowplot::plot_grid(plotlist = lc_plots)
 
