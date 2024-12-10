@@ -12,7 +12,7 @@ output:
 
 ## Required packages
 
-```{r, warning=FALSE, message=FALSE}
+```{r setup-packages, warning=FALSE, message=FALSE}
 library(dplyr)
 library(ggplot2)
 library(janitor)
@@ -24,6 +24,15 @@ library(glue)
 library(scales)
 ```
 
+
+## Source files
+
+Some `{ggplot}` styling files, not necessary for analysis but plotting functions will fail without them
+
+```{r setup-source_files}
+source("R/themes.R")
+source("R/dhsc_colour_palette.R")
+```
 
 
 ## Getting the data
@@ -801,6 +810,219 @@ return(p)
 
 ### Alcohol
 
+```{r function-combine_national_data_alcohol}
+# This function pulls together national-level alcohol-related death data by:
+# 1. Fetching total alcohol-specific deaths from ONS data.
+# 2. Getting alcohol-specific deaths from treatment data (NDTMS), but excluding drug poisonings.
+# 3. Replacing the alcohol-specific death counts in treatment data with the official ONS numbers
+#    to avoid double counting.
+combine_national_data_alcohol <- function() {
+  # Step 1: Get the total alcohol-specific deaths from ONS, summed up.
+  total_alc_spec_deaths_ons <-
+    get_ons_alcohol_specific_death_data() |> 
+    summarise(count = sum(count)) %>%
+    pull(count)
+  
+  # Step 2: From treatment data, filter to the desired period/range, remove drug poisonings,
+  # and then sum up counts by cause.
+  alcohol_deaths <-
+    get_alcohol_specific_deaths_from_tx(data = get_non_poisoning_deaths()) |>
+    filter(period_range == "April 2022 to March 2023", death_cause != "Drug poisoning") |>
+    group_by(death_cause) |>
+    summarise(count = sum(count), .groups = "drop") |>
+    # Step 3: Replace the alcohol-specific deaths count with the ONS total to ensure accuracy.
+    mutate(count = case_when(
+      death_cause == "Alcohol-specific death" ~ total_alc_spec_deaths_ons,
+      TRUE ~ count
+    )) |>
+    # Label categories by source 
+    mutate(death_category = if_else(
+      death_cause == "Alcohol-specific death",
+      "Alcohol-specific deaths (ONS)",
+      "Additional deaths (NDTMS-ONS linkage)"
+    ))
+  
+  # Return the combined alcohol death data.
+  return(alcohol_deaths)
+}
+```
+
+```{r function-aggregate_alcohol_deaths}
+# This function takes the combined alcohol death data and aggregates it by death category
+aggregate_alcohol_deaths <- function(combined_national_alcohol_deaths) {
+  aggregate_alcohol_deaths <-
+    combined_national_alcohol_deaths |>
+    group_by(death_category) |>
+    summarise(count = sum(count), .groups = "drop")
+  
+  return(aggregate_alcohol_deaths)
+}
+```
+
+```{r function-plot_additional_alcohol_deaths}
+# This function plots the "additional alcohol deaths" from the combined data.
+# It's a simple bar chart showing counts by cause, excluding the main alcohol-specific deaths (ONS).
+plot_additional_alcohol_deaths <- function() {
+  combine_national_data_alcohol() |>
+    arrange(count) |>
+    mutate(death_cause = forcats::as_factor(death_cause)) |>
+    filter(death_category != "Alcohol-specific deaths (ONS)") |>
+    ggplot(aes(y = death_cause, x = count)) +
+    geom_col(
+      width = 0.45,
+      fill = dhsc_colour()[1],
+      colour = "black"
+    ) +
+    my_theme +
+    theme(
+      legend.direction = "horizontal",
+      legend.byrow = TRUE,
+      plot.caption.position = "plot",
+      plot.title.position = "plot"
+    ) +
+    # Add some descriptive labels and title
+    labs(
+      x = "Deaths (n)",
+      y = NULL,
+      title = "Additional alcohol deaths",
+      subtitle = "by cause",
+      caption = "Deaths in treatment or within a year of discharge April 2022 to March 2023
+(with a cause other than 'alcohol-specific death', to avoid double counting with ONS)"
+    )
+}
+```
+
+### Drugs and alcohol
+
+```{r function-get_merged_national_data}
+# This function merges alcohol and drug-related mortality data into one dataset.
+# It:
+# 1. Fetches and relabels the drug data.
+# 2. Gets the aggregated alcohol death data.
+# 3. Categorises the deaths by source and substance.
+# 4. Ensures consistent factor levels for plotting and analysis downstream.
+get_merged_national_data <- function() {
+  # Get the drugs data and do some relabelling and cleaning
+  drugs_data <- get_national_data_drugs() |>
+    relabel_national_data() |>
+    mutate(substance = "Drugs")
+  
+  # Get the alcohol data and set the year to 2022
+  alc_data <-
+    combine_national_data_alcohol() |>
+    aggregate_alcohol_deaths() |>
+    mutate(substance = "Alcohol") |>
+    mutate(year = 2022)
+  
+  # Remove deaths that occurred more than a year after discharge
+  drugs_data <-
+    drugs_data %>%
+    filter(!str_detect(death_category, "one or more")) %>%
+    select(-year)
+  
+  # Combine alcohol and drugs data together
+  merged_data <-
+    bind_rows(alc_data, drugs_data) %>%
+    # Replace "poisoning deaths" phrase with "poisoning drug deaths" for clarity
+    mutate(death_category = str_replace(death_category, "poisoning deaths", "poisoning drug deaths"))
+  
+  # Reassign 'substance' values with a consistent pattern
+  merged_data <-
+    merged_data %>%
+    mutate(substance = c("alcohol", "alcohol", rep("drugs", 4)))
+  
+  # Change the alcohol death category names
+  merged_data[c(1, 2), "death_category"] <-
+    c(
+      "Additional alcohol deaths",
+      "Initial alcohol-specific deaths"
+    )
+  
+  # Define factor levels for plotting.
+  death_category_levels <-
+    c(
+      "Initial poisoning drug deaths",
+      "Additional poisoning drug deaths",
+      "Non-poisoning drug deaths: Died in treatment",
+      "Non-poisoning drug deaths: Died within a year of discharge",
+      "Initial alcohol-specific deaths",
+      "Additional alcohol deaths"
+    )
+  
+  # Re-factor the 'death_category' column so that categories appear in the desired order.
+  merged_data <-
+    merged_data %>%
+    mutate(death_category = factor(death_category, levels = rev(death_category_levels)))
+  
+  # Drop the 'year' column since we don't need it in the final dataset.
+  merged_data <-
+    select(merged_data, -year)
+  
+  return(merged_data)
+}
+```
+
+
+
+```{r function-plot_all_deaths_by_source}
+# This function plots all deaths (both alcohol and drug-related) in a single stacked bar.
+# It:
+# 1. Merges data from alcohol and drugs into one dataset.
+# 2. Summarizes them in a single column, with a dashed line showing the total sum.
+# 3. Annotates counts on the bars and labels each category to the right of the bar.
+plot_all_deaths_by_source <- function() {
+  data <- get_merged_national_data()
+  
+  # Convert 'substance' to a more sentence-friendly format.
+  data <-
+    data |>
+    mutate(substance = snakecase::to_sentence_case(substance))
+  
+  data |>
+    ggplot(aes(x = 1, y = count)) +
+    # A horizontal line showing total deaths
+    geom_hline(yintercept = sum(data$count), linetype = 2) +
+    # A single column, stacked by death_category, shaded by substance
+    geom_col(aes(group = death_category, fill = substance), width = 0.45, alpha = 0.7, colour = "black") +
+    # Display the counts as labels in the middle of each stack
+    geom_text(
+      aes(
+        label = scales::comma(count),
+        group = death_category
+      ),
+      position = position_stack(0.5),
+      size = 4,
+      colour = "black",
+      fontface = "bold"
+    ) +
+    # Put the category labels to the right of the bar
+    geom_text(aes(label = death_category, group = death_category, x = 1.4, y = count),
+              position = position_stack(0.5), hjust = 0
+    ) +
+    # Apply custom theme and color scale
+    my_theme +
+    my_fill_scale +
+    # Adjust x-axis limits and y-axis breaks for a nice look
+    scale_x_continuous(limits = c(0.5, 4)) +
+    scale_y_continuous(labels = scales::comma, breaks = c(0, 5000, 10000, sum(data$count))) +
+    # Remove some gridlines and ticks for a cleaner look
+    theme(
+      axis.text.x = element_blank(),
+      axis.ticks.x = element_blank(),
+      panel.grid.major = element_blank(),
+      panel.grid.minor = element_blank()
+    ) +
+    # Add labels and titles
+    labs(
+      x = NULL,
+      y = "Deaths (n)",
+      fill = NULL,
+      title = "Estimated mortality associated with substance use",
+      subtitle = "2022"
+    )
+}
+```
+
 ## Calculating years of life lost (YLL)
 
 ### Initial estimate
@@ -984,17 +1206,7 @@ calculate_substance_use_yll <- function() {
 
 ```
 
-## Plotting results
-
-### Plot count of drug deaths
-
-```{r, message=FALSE, warning=FALSE}
-create_national_drugs_deaths_plot()
-```
-
-### Plot YLL crude estimate
-
-Produces a plot of the crude YLL estimate. Sources two scripts that define `ggplot2` aesthetics but don't contibute to the analysis.
+#### Produces a plot of the crude YLL estimate
 
 ```{r function-plot_crude_yll_estimate, message=FALSE}
 plot_crude_yll_estimate <- 
@@ -1027,14 +1239,10 @@ crude_yll  |>
 return(p)
   }
 
-plot_crude_yll_estimate()
 
 ```
 
-
-### Plot discounted and weighted estimate
-
-Produces a similar plot for the discounted and age-weighted YLL estimate
+#### Produces a similar plot for the discounted and age-weighted YLL estimate
 
 ```{r function-plot_substance_use_yll_estimate, message=FALSE}
 plot_substance_use_yll_estimate <-
@@ -1068,8 +1276,41 @@ plot_substance_use_yll_estimate <-
     
   }
 
-plot_substance_use_yll_estimate() 
 
+```
+
+
+## Plotting results
+
+### Plot count of drug deaths
+
+```{r, message=FALSE, warning=FALSE}
+create_national_drugs_deaths_plot()
+```
+
+### Plot additional alcohol deaths
+
+```{r, message=FALSE, warning=FALSE}
+plot_additional_alcohol_deaths()
+```
+
+### Plot all deaths by substance and source
+
+```{r, message=FALSE, warning=FALSE}
+plot_all_deaths_by_source()
+```
+
+### Plot YLL crude estimate
+
+```{r, message=FALSE, warning=FALSE}
+plot_crude_yll_estimate()
+```
+
+
+### Plot discounted and weighted estimate
+
+```{r, message=FALSE, warning=FALSE}
+plot_substance_use_yll_estimate()
 ```
 
 
