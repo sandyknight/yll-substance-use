@@ -2,17 +2,13 @@
 title: "Years of life lost due to substance misuse"
 author: "Sandy Knight"
 date: "2024-12-07"
-output: 
-  html_document:
-    theme: darkly
-    toc: yes
-    toc_float:
-      collapsed: true
+output:
+  pdf_document:
+    toc: true
+    number_sections: true
 ---
 
-## Required packages
-
-```{r setup-packages, warning=FALSE, message=FALSE}
+```{r, include=FALSE, echo=FALSE, message=FALSE, warning=FALSE}
 library(dplyr)
 library(ggplot2)
 library(janitor)
@@ -22,36 +18,14 @@ library(arrow)
 library(tidyr)
 library(glue)
 library(scales)
-```
 
-
-## Source files
-
-Some `{ggplot}` styling files, not necessary for analysis but plotting functions will fail without them
-
-```{r setup-source_files}
 source("R/themes.R")
 source("R/dhsc_colour_palette.R")
 ```
 
 
-## Getting the data
 
-Each of these functions take no arguments and return a raw dataset when called.
-
-### Drug poisoning data
-
-The ONS publishes drug poisonings and classifies them as "related to drug misuse" given certain criteria i.e. specific ICD-10 codes on the death record. 
-
-The linkage of NDTMS and ONS data reveals that some deaths that had insufficient information for the ONS to apply this classification are probably related to drug misuse since they occured either in treatment or within a year of discharge. This analysis uses data from both sources to adjust the total number of deaths to include these additional deaths.
-
-The functions in this section load each of the raw datasets when called.
-
-### NDTMS-ONS linked dataset deaths
-
-Drug poisoning deaths from the NDTMS-ONS data linkage. This function loads the required data from an Excel workbook received by email from EAT with the name `table1_all deaths_Cocaine version 1.xlsx`. Since loading data this large from Excel takes a long time it is saved as a parquet file to speed up later analysis. If this is already done the function does nothing. Note that this is not publicly available data.  
-
-```{r function-get_drug_deaths}
+```{r, include=FALSE, echo=FALSE, message=FALSE, warning=FALSE}
 get_drug_poisoning_deaths <- function(){ 
 if (!file.exists("data/raw/ndtms_mortality_data.parquet")) {
   #  This file is NDTMS-ONS data linkage; received by email from Stefan and
@@ -70,11 +44,8 @@ if (!file.exists("data/raw/ndtms_mortality_data.parquet")) {
 }
 ```
 
-### ONS deaths related to drug poisoning
 
-The ONS drug poisoning data is publicly available at the URI in this function. This function downloads, reshapes, and returns the relevant ONS data.
-
-```{r function-get_ons_drug_poisoning_data} 
+```{r, include=FALSE, echo=FALSE, message=FALSE, warning=FALSE} 
 get_ons_drug_poisoning_data  <- 
 function(){
 url <- "https://www.ons.gov.uk/file?uri=/peoplepopulationandcommunity/birthsdeathsandmarriages/deaths/datasets/deathsrelatedtodrugpoisoningenglandandwalesreferencetable/current/2023registrations.xlsx"
@@ -105,13 +76,8 @@ return(ons_registrations)
 }
 ```
 
-### Non-poisoning deaths of people with contact with the treatment system
 
-The NDTMS-ONS data linkage also has records for people who died in treatment or after treatment from causes other than drug poisoning. This analysis adds those deaths to either drug- or -alcohol related deaths depending on the cause and, in the case of those people in treatment for drug use, time since discharge. 
-
-The treatment mortality data was received by email from EAT,(*received: 2024-07-08 from CA*) and named `post election data for Jon- sent.xlsx`. This data is not publicly available.
-
-```{r, function-get_non_poisoning_deaths}
+```{r, include=FALSE, echo=FALSE, message=FALSE, warning=FALSE}
 
 get_non_poisoning_deaths <- function(){
 np_deaths <- 
@@ -127,11 +93,8 @@ return(np_deaths )
 }
 ```
 
-### ONS alcohol-specific deaths
 
-The ONS alcohol-specific death data is publicly available at the URI in this function. This function downloads, reshapes, and returns the relevant ONS data.
-
-```{r function-get_ons_alcohol_specific_death_data}
+```{r, include=FALSE, echo=FALSE, message=FALSE, warning=FALSE}
 get_ons_alcohol_specific_death_data <- 
   function(){
     
@@ -152,11 +115,8 @@ return(alc_specific_deaths)
 }
 ```
 
-### Life expectancy
 
-This function downloads, re-labels, and reshapes the ONS life tables for use in the YLL analysis. 
-
-```{r function-get_life_tables}
+```{r, include=FALSE, echo=FALSE, message=FALSE, warning=FALSE}
 get_life_tables <- function() {
     url <- "https://www.ons.gov.uk/file?uri=/peoplepopulationandcommunity/birthsdeathsandmarriages/lifeexpectancies/datasets/nationallifetablesunitedkingdomreferencetables/current/nltuk198020203.xlsx"
     
@@ -178,13 +138,8 @@ get_life_tables <- function() {
 
 ```
 
-## Data processing and preparation
 
-### Drug deaths
-
-The following two functions were written to allow other analyses of drug deaths and have more flexibilty (and therefore are unfortunately long and complicated) than is necessary for the YLL analysis. They should both take the output of the corresponding `get_*_data()` functions as the `data` argument. For this analysis we'll choose to group the data by age and sex, and use date of occurrence rater than registration. 
-
-```{r function-process_drug_poisoning_deaths}
+```{r, include=FALSE, echo=FALSE, message=FALSE, warning=FALSE}
 
 #' Process drug poisoning data
 #' 
@@ -282,7 +237,7 @@ process_poisoning_data <- function(data, date_of = "occurrence", years = c(2022,
 }
 ```
 
-```{r function-process_non_poisoning_deaths}
+```{r, include=FALSE, echo=FALSE, message=FALSE, warning=FALSE}
 
 #' Process deaths in treatment data
 #' 
@@ -374,14 +329,9 @@ process_deaths_in_treatment <- function(data,
 
 ```
 
-### Alcohol deaths
 
-This function extracts:    
-1. alcohol-specific deaths in or after treatment and;
-2. deaths of people in treatment for alcohol use only
-from the output of `get_non_poisoning_deaths()`
 
-```{r}
+```{r, include=FALSE, echo=FALSE, message=FALSE, warning=FALSE} 
 
 get_alcohol_specific_deaths_from_tx <- function(data){
 data |> 
@@ -392,11 +342,9 @@ data |>
 
 ```
 
-### Age group parsing
 
-These functions parse the age groups in the datasets that don't have single-year-of-age fields to allow merging.
 
-```{r function-parse_age_groups}
+```{r, include=FALSE, echo=FALSE, message=FALSE, warning=FALSE}
 # Simplified parse_age_groups function
 parse_age_groups <- function(age_groups) {
   # Patterns for age group formats
@@ -443,7 +391,7 @@ parse_age_groups <- function(age_groups) {
 
 ```
 
-```{r function-assign_age_group}
+```{r, include=FALSE, echo=FALSE, message=FALSE, warning=FALSE}
 
 assign_age_group <- function(ages, age_df) {
   # We assume ages is already an integer vector
@@ -463,9 +411,7 @@ assign_age_group <- function(ages, age_df) {
 ```
 
 
-## Data merging
-
-```{r function-merge_drug_deaths}
+```{r, include=FALSE, echo=FALSE, message=FALSE, warning=FALSE}
 merge_drug_deaths <- function() {
   # Process and aggregate poisoning deaths by age and sex for the specified year
   poisoning_deaths_by_age <-
@@ -514,7 +460,7 @@ merge_drug_deaths <- function() {
 
 ```
 
-```{r function-merge_alcohol_deaths}
+```{r, include=FALSE, echo=FALSE, message=FALSE, warning=FALSE}
 
 merge_alcohol_deaths <- function() {
   # Get ONS alcohol-specific death data
@@ -561,21 +507,8 @@ merge_alcohol_deaths <- function() {
 
 ```
 
-## Counts of aggregate deaths 
 
-These functions aggregate and plot the total count of deaths. The only categories are the substance, poisoning or non-poisoning, and whether they were counted in the initial ONS data or added from analysis of the linked dataset:
-
-* Initial poisoning deaths
-* Additional poisoning deaths
-* Non-poisoning deaths: Died in treatment
-* Non-poisoning deaths: Died within a year of discharge
-* Non-poisoning deaths: Died one or more years following discharge *(not counted in the total)*
-
-### Drugs
-
-#### Combines poisoning and non-poisoning drugs deaths data
-
-```{r function-combine_national_data_drugs}
+```{r, include=FALSE, echo=FALSE, message=FALSE, warning=FALSE}
 #' Combine national data 
 #'
 #' Merges poisoning data and treatment death data, ensuring consistent grouping by death category.
@@ -592,9 +525,8 @@ combine_national_data_drugs <- function(poisoning_data, treatment_deaths_data) {
 }
 ```
 
-#### Gets national drugs deaths occurrences data for 2022
 
-```{r function-get_national_data_drugs}
+```{r, include=FALSE, echo=FALSE, message=FALSE, warning=FALSE}
 
 get_national_data_drugs <- function() {
   combine_national_data_drugs(
@@ -615,9 +547,8 @@ get_national_data_drugs <- function() {
 
 ```
 
-#### Relabels national data for plot
 
-```{r function-relabel_national_data}
+```{r, include=FALSE, echo=FALSE, message=FALSE, warning=FALSE}
 #' Relabel national data
 #' 
 #' Adjusts labels for death categories, emphasizing poisoning and non-poisoning distinctions.
@@ -647,9 +578,8 @@ relabel_national_data <- function(national_data) {
 
 ```
 
-#### Plots national drugs death data showing the additional deaths calculated using the data linkage
 
-```{r function-plot_national_data_drugs}
+```{r, include=FALSE, echo=FALSE, message=FALSE, warning=FALSE}
 # Function to create the plot
 plot_national_data_drugs <- function(plot_data) {
   ttl <- 
@@ -718,9 +648,8 @@ plot_national_data_drugs <- function(plot_data) {
 ```
 
 
-#### Adds annotations to national drugs deaths plot
 
-```{r}
+```{r, include=FALSE, echo=FALSE, message=FALSE, warning=FALSE}
 # Function to add annotations to the plot
 add_plot_annotations <- function(plot, data) {
   # Filter data for the latest year
@@ -791,9 +720,8 @@ add_plot_annotations <- function(plot, data) {
 
 ```
 
-#### Returns the aggregate deaths plot showing the total is composed of the relevant categories. 
 
-```{r function-create_national_drugs_deaths_plot}
+```{r, include=FALSE, echo=FALSE, message=FALSE, warning=FALSE}
 create_national_drugs_deaths_plot <- function(){
  data <- get_national_data_drugs() |> 
   relabel_national_data() 
@@ -808,9 +736,8 @@ return(p)
 }
 ```
 
-### Alcohol
 
-```{r function-combine_national_data_alcohol}
+```{r, include=FALSE, echo=FALSE, message=FALSE, warning=FALSE}
 # This function pulls together national-level alcohol-related death data by:
 # 1. Fetching total alcohol-specific deaths from ONS data.
 # 2. Getting alcohol-specific deaths from treatment data (NDTMS), but excluding drug poisonings.
@@ -847,7 +774,7 @@ combine_national_data_alcohol <- function() {
 }
 ```
 
-```{r function-aggregate_alcohol_deaths}
+```{r, include=FALSE, echo=FALSE, message=FALSE, warning=FALSE}
 # This function takes the combined alcohol death data and aggregates it by death category
 aggregate_alcohol_deaths <- function(combined_national_alcohol_deaths) {
   aggregate_alcohol_deaths <-
@@ -859,7 +786,7 @@ aggregate_alcohol_deaths <- function(combined_national_alcohol_deaths) {
 }
 ```
 
-```{r function-plot_additional_alcohol_deaths}
+```{r, include=FALSE, echo=FALSE, message=FALSE, warning=FALSE}
 # This function plots the "additional alcohol deaths" from the combined data.
 # It's a simple bar chart showing counts by cause, excluding the main alcohol-specific deaths (ONS).
 plot_additional_alcohol_deaths <- function() {
@@ -892,9 +819,8 @@ plot_additional_alcohol_deaths <- function() {
 }
 ```
 
-### Drugs and alcohol
 
-```{r function-get_merged_national_data}
+```{r, include=FALSE, echo=FALSE, message=FALSE, warning=FALSE}
 # This function merges alcohol and drug-related mortality data into one dataset.
 # It:
 # 1. Fetches and relabels the drug data.
@@ -964,7 +890,7 @@ get_merged_national_data <- function() {
 
 
 
-```{r function-plot_all_deaths_by_source}
+```{r, include=FALSE, echo=FALSE, message=FALSE, warning=FALSE}
 # This function plots all deaths (both alcohol and drug-related) in a single stacked bar.
 # It:
 # 1. Merges data from alcohol and drugs into one dataset.
@@ -1023,21 +949,9 @@ plot_all_deaths_by_source <- function() {
 }
 ```
 
-## Calculating years of life lost (YLL)
 
-### Initial estimate
 
-The crude expected years of life lost is:
-
-$$
-YLL = (D_{x})(e_{x}^s)
-$$
-
-Where $D_x$ is the number of deaths in the age group and $e_{x}^s$ is the mean standard age of death from the external life expectancy (the ONS life tables) for the age. This is the method used by the Global Burden of Disease Study (GBD) [^1].   
-
-#### Calculates crude YLL
-
-```{r function-calculate_crude_yll, message=FALSE}
+```{r, include=FALSE, echo=FALSE, message=FALSE, warning=FALSE}
 calculate_crude_yll <- function() {
   # Step 1: Merge alcohol-related deaths into a single dataset
   alcohol_deaths <- merge_alcohol_deaths()
@@ -1099,27 +1013,8 @@ calculate_crude_yll <- function() {
 
 ```
 
-### YLL with age-weighting and discounting
 
-This function is from [here](https://static-content.springer.com/esm/art%3A10.1186%2F1471-2458-8-116/MediaObjects/12889_2007_1086_MOESM3_ESM.pdf)[^2]. It uses the same basic method but applies discounting and age-weighting.
-
-The formula is:
-
-$$Y_x = d_x \left[ \frac{KCe^{r(n^a_x)}}{(r+\beta)^2} \left( e^{z[-(r+\beta)(e^s_x + a_x) - 1]} - e^{-(r+\beta)a_x[-(r+\beta)a_x - 1]} \right) + \frac{1-K}{r} (1 - e^{r(e^s_x)}) \right]$$
-\   
-where:\
-𝑎 = age of death (years)\
-𝑟 = discount rate (usually 3%)\
-𝛽 = age weighting constant (usually 𝛽=0.04)\
-𝐾 = age-weighting modulation constant (usually 𝐾=1)\
-𝐶 = adjustment constant for age-weights (usually 𝐶=0.1658)\
-𝑒 = standard life expectancy at age of death (years)\
-
-The default values for these parameters were chosen and calibrated in the original Global Burden of Disease (GBD) study [^3]
-
-#### Function to apply the formula:
-
-```{r function-calculate_yll}
+```{r, include=FALSE, echo=FALSE, message=FALSE, warning=FALSE}
 
 calculate_yll <-
   function(number.deaths,
@@ -1147,9 +1042,8 @@ calculate_yll <-
 
 ```
 
-#### This function uses the `calculate_yll` function to estimate the total YLL for drug and alcohol use with discounting and age weighting. 
 
-```{r function-calculate_substance_use_yll}
+```{r, include=FALSE, echo=FALSE, message=FALSE, warning=FALSE}
 calculate_substance_use_yll <- function() {
   # Merge and summarise alcohol-related deaths by age group and sex
   alcohol_deaths <- 
@@ -1207,9 +1101,8 @@ calculate_substance_use_yll <- function() {
 
 ```
   
-#### Produces a plot of the crude YLL estimate
 
-```{r function-plot_crude_yll_estimate, message=FALSE}
+```{r, include=FALSE, echo=FALSE, message=FALSE, warning=FALSE}
 plot_crude_yll_estimate <- 
   function(){
 source("R/dhsc_colour_palette.R")
@@ -1243,9 +1136,8 @@ return(p)
 
 ```
 
-#### Produces a similar plot for the discounted and age-weighted YLL estimate
 
-```{r function-plot_substance_use_yll_estimate, message=FALSE}
+```{r, include=FALSE, echo=FALSE, message=FALSE, warning=FALSE}
 plot_substance_use_yll_estimate <-
   function(){
     source("R/dhsc_colour_palette.R")
@@ -1281,40 +1173,256 @@ plot_substance_use_yll_estimate <-
 ```
 
 
-## Plotting results
+```{r, include=FALSE, echo=FALSE, message=FALSE, warning=FALSE}
+get_all_cause_mortality <-
+  function(){
+    
+    # Use cached file if it exists
+    if (file.exists("data/processed/ons_leading_mortality_causes.csv")){
+      
+      # Download and process mortality data from ONS
+      ons_leading_mortality_causes <-
+        read.xlsx(
+          xlsxFile = "https://www.ons.gov.uk/file?uri=/peoplepopulationandcommunity/birthsdeathsandmarriages/deaths/datasets/deathsregisteredinenglandandwalesseriesdrreferencetables/2022/dr2022corrected.xlsx",
+          sheet = "10b",
+          rows = c(6:55)) |>
+        janitor::clean_names() |>
+        as_tibble() |>
+        mutate(percentage_of_all_deaths_percent = percentage_of_all_deaths_percent / 100) # convert to proportion
+      
+      return(ons_leading_mortality_causes)
+    }
+  }
 
-### Plot count of drug deaths
+merge_leading_cause_data <- function() {
+  all_cause_mortality <- get_all_cause_mortality()
+  alcohol_deaths <- merge_alcohol_deaths()
+  drug_deaths <- merge_drug_deaths()
+  
+  # Identify common age groups of interest
+  leading_mortality_age_groups <- unique(pull(all_cause_mortality, age_group))
+  leading_mortality_age_groups <- leading_mortality_age_groups[4:7] # focus on mid-age ranges
+  
+  # Filter and select top 5 causes per age group
+  all_cause_mortality <-
+    all_cause_mortality |>
+    filter(age_group %in% leading_mortality_age_groups) |>
+    group_by(age_group) |>
+    group_split() |>
+    lapply(function(x) slice(arrange(x, -deaths), 1:5)) |>
+    bind_rows()
+  
+  # Group drug deaths into similar age categories
+  drug_deaths <-
+    drug_deaths |>
+    filter(age < 80, age > 18) |>
+    mutate(age_group = cut(
+      age,
+      breaks = c(19, 34, 49, 64, 79),
+      labels = c("20 to 34 years","35 to 49 years","50 to 64 years","65 to 79 years"),
+      right = TRUE
+    )) |>
+    filter(age_group %in% leading_mortality_age_groups) |>
+    group_by(substance, age_group) |>
+    summarise(count = sum(count), .groups = "drop") |>
+    mutate(leading_cause = "Deaths associated with drug use") |>
+    select(-substance)
+  
+  # Map various age brackets to consistent age groups for alcohol data
+  alcohol_deaths <-
+    alcohol_deaths |>
+    mutate(
+      age_group =
+        case_match(
+          age_group,
+          "20-24" ~ "20 to 34 years",
+          "25-29" ~ "20 to 34 years",
+          "30-34" ~ "20 to 34 years",
+          "35-39" ~ "35 to 49 years",
+          "40-44" ~ "35 to 49 years",
+          "45-49" ~ "35 to 49 years",
+          "50-54" ~ "50 to 64 years",
+          "55-59" ~ "50 to 64 years",
+          "60-64" ~ "50 to 64 years",
+          "65-69" ~ "65 to 79 years",
+          "70-74" ~ "65 to 79 years",
+          "75-79" ~ "65 to 79 years"
+        )
+    ) |>
+    filter(!is.na(age_group)) |>
+    group_by(substance, age_group) |>
+    summarise(count = sum(count), .groups = "drop") |>
+    mutate(leading_cause = "Deaths associated with alcohol use") |>
+    select(-substance)
+  
+  # Combine all cause mortality with drug and alcohol data
+  all_cause_mortality <-
+    all_cause_mortality |>
+    select(age_group, leading_cause, deaths) |>
+    rename("count" = deaths)
+  
+  leading_cause_mortality_comparison <-
+    bind_rows(list(
+      all_cause_mortality,
+      alcohol_deaths,
+      drug_deaths
+    )) |>
+    group_by(age_group) |>
+    group_split()
+  
+  return(leading_cause_mortality_comparison)
+}
 
-```{r, message=FALSE, warning=FALSE}
+prepare_leading_cause_data <- function(data, substance) {
+  # Separate out main causes vs. drug/alcohol-associated ones
+  causes <- pull(filter(data, !str_detect(leading_cause, "drug|alcohol")), leading_cause)
+  
+  # If combined, sum drug & alcohol counts together
+  if (substance == "combined") {
+    data <-
+      data |>
+      filter(leading_cause %in% c("Deaths associated with drug use","Deaths associated with alcohol use")) |>
+      group_by(age_group) |>
+      summarise(count = sum(count), .groups = "drop") |>
+      mutate(leading_cause = "Deaths associated with drug and alcohol use") |>
+      bind_rows(filter(data, !leading_cause %in% c("Deaths associated with drug use","Deaths associated with alcohol use")))
+  } else {
+    # Pick the substance of interest, or both simultaneously
+    substance <-
+      switch(substance,
+             "drugs" = "Deaths associated with alcohol use",
+             "alcohol" = "Deaths associated with drug use",
+             "both" = c("Deaths associated with drug use", "Deaths associated with alcohol use")
+      )
+    
+    data <-
+      data |>
+      filter(leading_cause %in% c(substance, causes))
+    
+    return(data)
+  }
+}
+
+iterate_data_preparation <- function(substance) {
+  leading_cause_mortality_comparison <- merge_leading_cause_data()
+  # Apply preparation for each age group subset
+  lapply(leading_cause_mortality_comparison, function(data) prepare_leading_cause_data(data = data, substance = substance))
+}
+
+leading_cause_mortality_comparison <- function(){
+  # Prepare data for each scenario
+  lapply(X = c("drugs", "alcohol", "both", "combined"), FUN = iterate_data_preparation) |>
+    unlist(recursive = FALSE)
+}
+
+plot_leading_cause_comparison <-
+  function(data) {
+    # Bar plot comparing count of deaths by causes vs drugs and alcohol
+    data |>
+      arrange(count) |>
+      mutate(leading_cause = forcats::as_factor(leading_cause)) |>
+      ggplot(aes(x = count, y = leading_cause, fill = leading_cause)) +
+      geom_col() +
+      scale_fill_manual(values = c("Deaths associated with drug use" = "red", "Deaths associated with alcohol use" = "red", "Deaths associated with drug and alcohol use" = "red")) +
+      my_theme +
+      theme(legend.position = "none") +
+      scale_x_continuous(labels = scales::comma) +
+      labs(x = "Deaths (n)", y = NULL, subtitle = unique(data$age_group))
+  }
+
+```
+
+### Deaths associated with drug use
+
+The ONS publishes drug poisonings and classifies them as "related to drug misuse" given certain criteria i.e. specific ICD-10 codes on the death record. 
+
+The linkage of NDTMS and ONS data reveals that some deaths that had insufficient information for the ONS to apply this classification are probably related to drug misuse since they occured either in treatment or within a year of discharge. This analysis uses data from both sources to adjust the total number of deaths to include these additional deaths.
+
+The NDTMS-ONS data linkage also has records for people who died in treatment or after treatment from causes other than drug poisoning. This analysis adds those deaths to either drug- or alcohol-related deaths depending on the cause and, in the case of those people in treatment for drug use, time since discharge. 
+ 
+This analysis aggregates and plots the total count of deaths associated with drug use. The only categories are the substance, poisoning or non-poisoning, and whether they were counted in the initial ONS data or added from analysis of the linked dataset:
+
+* Initial poisoning deaths
+* Additional poisoning deaths
+* Non-poisoning deaths: Died in treatment
+* Non-poisoning deaths: Died within a year of discharge
+* Non-poisoning deaths: Died one or more years following discharge *(not counted in the total)*
+
+```{r, echo=FALSE, message=FALSE, warning=FALSE}
 create_national_drugs_deaths_plot()
 ```
 
-### Plot additional alcohol deaths
+### Deaths associated with alcohol 
 
-```{r, message=FALSE, warning=FALSE}
+Using the same method with the ONS alcohol-specific deaths data and the linked dataset we can identify additional deaths related to alcohol deaths.
+
+```{r, echo=FALSE, message=FALSE, warning=FALSE}
 plot_additional_alcohol_deaths()
 ```
 
-### Plot all deaths by substance and source
+### Deaths associated with substance use
 
-```{r, message=FALSE, warning=FALSE}
+We can then combine the counts of additional deaths associated with substance use and see the estimated total impact of substance use on mortality (not including "alcohol-related deaths" as defined by the ONS, as they are mostly not the population in treatment or with a treatment need)
+
+```{r, echo=FALSE, message=FALSE, warning=FALSE}
 plot_all_deaths_by_source()
 ```
 
-### Plot YLL crude estimate
+### Years of life lost
 
-```{r, message=FALSE, warning=FALSE}
+Using the counts of deaths associated with drug misuse stratified by age and the [life expectancy tables from the ONS](https://www.ons.gov.uk/peoplepopulationandcommunity/birthsdeathsandmarriages/lifeexpectancies/datasets/nationallifetablesunitedkingdomreferencetables) we can estimate the years of life lost (YLL) due to substance use. 
+
+Just using the age (or age group) of death and the mean life expectancy for that age we can produce a YLL estimate for drugs and alcohol.
+
+Expected years of life lost with this method:
+
+$$
+YLL = (D_{x})(e_{x}^s)
+$$
+
+Where $D_x$ is the number of deaths in the age group and $e_{x}^s$ is the mean standard age of death from the external life expectancy (the ONS life tables) for the age.   
+
+```{r, echo=FALSE, message=FALSE, warning=FALSE}
 plot_crude_yll_estimate()
 ```
 
+However when YLL was incorporated into the Global Burden of Disease study (GBD) [^3] and the authors determined that discounting and age-weighting should be applied to better measure premature mortality. We use the GBD formula and parameters and apply them using open-source code published by Aragón, T.J. et al. [^2]
 
-### Plot discounted and weighted estimate
+The formula is:
 
-```{r, message=FALSE, warning=FALSE}
+
+$$Y_x = d_x \left[ \frac{KCe^{r(n^a_x)}}{(r+\beta)^2} \left( e^{z[-(r+\beta)(e^s_x + a_x) - 1]} - e^{-(r+\beta)a_x[-(r+\beta)a_x - 1]} \right) + \frac{1-K}{r} (1 - e^{r(e^s_x)}) \right]$$
+
+\   
+where:\
+𝑎 = age of death (years)\
+𝑟 = discount rate (usually 3%)\
+𝛽 = age weighting constant (usually 𝛽=0.04)\
+𝐾 = age-weighting modulation constant (usually 𝐾=1)\
+𝐶 = adjustment constant for age-weights (usually 𝐶=0.1658)\
+𝑒 = standard life expectancy at age of death (years)\
+
+The default values for these parameters were chosen and calibrated in the original Global Burden of Disease (GBD) study [^3]
+
+```{r, echo=FALSE, message=FALSE, warning=FALSE}
+
 plot_substance_use_yll_estimate()
+
 ```
 
+### Comparison with leading causes of mortality
 
+We also compared the augmented count of deaths associated with substance use with the leading causes of mortality [data](https://www.ons.gov.uk/peoplepopulationandcommunity/healthandsocialcare/causesofdeath/datasets/avoidablemortalitybylocalauthorityinenglandandwales) from the ONS. 
+
+When stratified by age group and the inclusion of drugs, alcohol, both, or the sum of both, this produces sixteen plots comparing substance use deaths with the leading causes of mortality:
+
+```{r, echo=FALSE, message=FALSE, warning=FALSE}
+
+lc_plots <- lapply(leading_cause_mortality_comparison(), plot_leading_cause_comparison)
+
+lc_plots
+
+```
 
 
 [^1]: Chudasama, Y.V., Khunti, K., Gillies, C.L., Dhalwani, N.N., Davies, M.J., Yates, T., & Zaccardi, F. (2022). Estimates of years of life lost depended on the method used: tutorial and comparative investigation. *Journal of Clinical Epidemiology*, 150, pp. 42–50. Available at: [https://doi.org/10.1016/j.jclinepi.2022.06.012](https://doi.org/10.1016/j.jclinepi.2022.06.012) [Accessed 6 Nov. 2024].

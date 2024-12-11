@@ -1,0 +1,324 @@
+% Options for packages loaded elsewhere
+\PassOptionsToPackage{unicode}{hyperref}
+\PassOptionsToPackage{hyphens}{url}
+%
+\documentclass[
+]{article}
+\usepackage{amsmath,amssymb}
+\usepackage{lmodern}
+\usepackage{iftex}
+\ifPDFTeX
+  \usepackage[T1]{fontenc}
+  \usepackage[utf8]{inputenc}
+  \usepackage{textcomp} % provide euro and other symbols
+\else % if luatex or xetex
+  \usepackage{unicode-math}
+  \defaultfontfeatures{Scale=MatchLowercase}
+  \defaultfontfeatures[\rmfamily]{Ligatures=TeX,Scale=1}
+\fi
+% Use upquote if available, for straight quotes in verbatim environments
+\IfFileExists{upquote.sty}{\usepackage{upquote}}{}
+\IfFileExists{microtype.sty}{% use microtype if available
+  \usepackage[]{microtype}
+  \UseMicrotypeSet[protrusion]{basicmath} % disable protrusion for tt fonts
+}{}
+\makeatletter
+\@ifundefined{KOMAClassName}{% if non-KOMA class
+  \IfFileExists{parskip.sty}{%
+    \usepackage{parskip}
+  }{% else
+    \setlength{\parindent}{0pt}
+    \setlength{\parskip}{6pt plus 2pt minus 1pt}}
+}{% if KOMA class
+  \KOMAoptions{parskip=half}}
+\makeatother
+\usepackage{xcolor}
+\usepackage[margin=1in]{geometry}
+\usepackage{graphicx}
+\makeatletter
+\def\maxwidth{\ifdim\Gin@nat@width>\linewidth\linewidth\else\Gin@nat@width\fi}
+\def\maxheight{\ifdim\Gin@nat@height>\textheight\textheight\else\Gin@nat@height\fi}
+\makeatother
+% Scale images if necessary, so that they will not overflow the page
+% margins by default, and it is still possible to overwrite the defaults
+% using explicit options in \includegraphics[width, height, ...]{}
+\setkeys{Gin}{width=\maxwidth,height=\maxheight,keepaspectratio}
+% Set default figure placement to htbp
+\makeatletter
+\def\fps@figure{htbp}
+\makeatother
+\setlength{\emergencystretch}{3em} % prevent overfull lines
+\providecommand{\tightlist}{%
+  \setlength{\itemsep}{0pt}\setlength{\parskip}{0pt}}
+\setcounter{secnumdepth}{5}
+\ifLuaTeX
+  \usepackage{selnolig}  % disable illegal ligatures
+\fi
+\IfFileExists{bookmark.sty}{\usepackage{bookmark}}{\usepackage{hyperref}}
+\IfFileExists{xurl.sty}{\usepackage{xurl}}{} % add URL line breaks if available
+\urlstyle{same} % disable monospaced font for URLs
+\hypersetup{
+  pdftitle={Years of life lost due to substance misuse},
+  pdfauthor={Sandy Knight},
+  hidelinks,
+  pdfcreator={LaTeX via pandoc}}
+
+\title{Years of life lost due to substance misuse}
+\author{Sandy Knight}
+\date{2024-12-07}
+
+\begin{document}
+\maketitle
+
+{
+\setcounter{tocdepth}{2}
+\tableofcontents
+}
+\hypertarget{deaths-associated-with-drug-use}{%
+\subsubsection{Deaths associated with drug
+use}\label{deaths-associated-with-drug-use}}
+
+The ONS publishes drug poisonings and classifies them as ``related to
+drug misuse'' given certain criteria i.e.~specific ICD-10 codes on the
+death record.
+
+The linkage of NDTMS and ONS data reveals that some deaths that had
+insufficient information for the ONS to apply this classification are
+probably related to drug misuse since they occured either in treatment
+or within a year of discharge. This analysis uses data from both sources
+to adjust the total number of deaths to include these additional deaths.
+
+The NDTMS-ONS data linkage also has records for people who died in
+treatment or after treatment from causes other than drug poisoning. This
+analysis adds those deaths to either drug- or alcohol-related deaths
+depending on the cause and, in the case of those people in treatment for
+drug use, time since discharge.
+
+This analysis aggregates and plots the total count of deaths associated
+with drug use. The only categories are the substance, poisoning or
+non-poisoning, and whether they were counted in the initial ONS data or
+added from analysis of the linked dataset:
+
+\begin{itemize}
+\tightlist
+\item
+  Initial poisoning deaths
+\item
+  Additional poisoning deaths
+\item
+  Non-poisoning deaths: Died in treatment
+\item
+  Non-poisoning deaths: Died within a year of discharge
+\item
+  Non-poisoning deaths: Died one or more years following discharge
+  \emph{(not counted in the total)}
+\end{itemize}
+
+\includegraphics{mortality-and-yll-output-report_files/figure-latex/unnamed-chunk-31-1.pdf}
+
+\hypertarget{deaths-associated-with-alcohol}{%
+\subsubsection{Deaths associated with
+alcohol}\label{deaths-associated-with-alcohol}}
+
+Using the same method with the ONS alcohol-specific deaths data and the
+linked dataset we can identify additional deaths related to alcohol
+deaths.
+
+\includegraphics{mortality-and-yll-output-report_files/figure-latex/unnamed-chunk-32-1.pdf}
+
+\hypertarget{deaths-associated-with-substance-use}{%
+\subsubsection{Deaths associated with substance
+use}\label{deaths-associated-with-substance-use}}
+
+We can then combine the counts of additional deaths associated with
+substance use and see the estimated total impact of substance use on
+mortality (not including ``alcohol-related deaths'' as defined by the
+ONS, as they are mostly not the population in treatment or with a
+treatment need)
+
+\includegraphics{mortality-and-yll-output-report_files/figure-latex/unnamed-chunk-33-1.pdf}
+
+\hypertarget{years-of-life-lost}{%
+\subsubsection{Years of life lost}\label{years-of-life-lost}}
+
+Using the counts of deaths associated with drug misuse stratified by age
+and the
+\href{https://www.ons.gov.uk/peoplepopulationandcommunity/birthsdeathsandmarriages/lifeexpectancies/datasets/nationallifetablesunitedkingdomreferencetables}{life
+expectancy tables from the ONS} we can estimate the years of life lost
+(YLL) due to substance use.
+
+Just using the age (or age group) of death and the mean life expectancy
+for that age we can produce a YLL estimate for drugs and alcohol.
+
+Expected years of life lost with this method:
+
+\[
+YLL = (D_{x})(e_{x}^s)
+\]
+
+Where \(D_x\) is the number of deaths in the age group and \(e_{x}^s\)
+is the mean standard age of death from the external life expectancy (the
+ONS life tables) for the age.
+
+\includegraphics{mortality-and-yll-output-report_files/figure-latex/unnamed-chunk-34-1.pdf}
+
+However when YLL was incorporated into the Global Burden of Disease
+study (GBD) \footnote{Murray, C.J., Lopez, A.D. and Jamison, D.T., 1994.
+  The global burden of disease in 1990: summary results, sensitivity
+  analysis and future directions. \emph{Bulletin of the world health
+  organization}, 72(3), p.495.} and the authors determined that
+discounting and age-weighting should be applied to better measure
+premature mortality. We use the GBD formula and parameters and apply
+them using open-source code published by Aragón, T.J. et al. \footnote{Aragón,
+  T.J., Lichtensztajn, D.Y., Katcher, B.S., Reiter, R. and Katz, M.H.,
+  2007. Calculating Expected Years of Life Lost to Rank the Leading
+  Causes of Premature Death in San Francisco. \emph{San Francisco
+  Department of Public Health}.}
+
+The formula is:
+
+\[Y_x = d_x \left[ \frac{KCe^{r(n^a_x)}}{(r+\beta)^2} \left( e^{z[-(r+\beta)(e^s_x + a_x) - 1]} - e^{-(r+\beta)a_x[-(r+\beta)a_x - 1]} \right) + \frac{1-K}{r} (1 - e^{r(e^s_x)}) \right]\]
+
+~\\
+where:\\
+𝑎 = age of death (years)\\
+𝑟 = discount rate (usually 3\%)\\
+𝛽 = age weighting constant (usually 𝛽=0.04)\\
+𝐾 = age-weighting modulation constant (usually 𝐾=1)\\
+𝐶 = adjustment constant for age-weights (usually 𝐶=0.1658)\\
+𝑒 = standard life expectancy at age of death (years)\\
+
+The default values for these parameters were chosen and calibrated in
+the original Global Burden of Disease (GBD) study \footnote{Murray,
+  C.J., Lopez, A.D. and Jamison, D.T., 1994. The global burden of
+  disease in 1990: summary results, sensitivity analysis and future
+  directions. \emph{Bulletin of the world health organization}, 72(3),
+  p.495.}
+
+\includegraphics{mortality-and-yll-output-report_files/figure-latex/unnamed-chunk-35-1.pdf}
+
+\hypertarget{comparison-with-leading-causes-of-mortality}{%
+\subsubsection{Comparison with leading causes of
+mortality}\label{comparison-with-leading-causes-of-mortality}}
+
+We also compared the augmented count of deaths associated with substance
+use with the leading causes of mortality
+\href{https://www.ons.gov.uk/peoplepopulationandcommunity/healthandsocialcare/causesofdeath/datasets/avoidablemortalitybylocalauthorityinenglandandwales}{data}
+from the ONS.
+
+When stratified by age group and the inclusion of drugs, alcohol, both,
+or the sum of both, this produces sixteen plots comparing substance use
+deaths with the leading causes of mortality:
+
+\begin{verbatim}
+## [[1]]
+\end{verbatim}
+
+\includegraphics{mortality-and-yll-output-report_files/figure-latex/unnamed-chunk-36-1.pdf}
+
+\begin{verbatim}
+## 
+## [[2]]
+\end{verbatim}
+
+\includegraphics{mortality-and-yll-output-report_files/figure-latex/unnamed-chunk-36-2.pdf}
+
+\begin{verbatim}
+## 
+## [[3]]
+\end{verbatim}
+
+\includegraphics{mortality-and-yll-output-report_files/figure-latex/unnamed-chunk-36-3.pdf}
+
+\begin{verbatim}
+## 
+## [[4]]
+\end{verbatim}
+
+\includegraphics{mortality-and-yll-output-report_files/figure-latex/unnamed-chunk-36-4.pdf}
+
+\begin{verbatim}
+## 
+## [[5]]
+\end{verbatim}
+
+\includegraphics{mortality-and-yll-output-report_files/figure-latex/unnamed-chunk-36-5.pdf}
+
+\begin{verbatim}
+## 
+## [[6]]
+\end{verbatim}
+
+\includegraphics{mortality-and-yll-output-report_files/figure-latex/unnamed-chunk-36-6.pdf}
+
+\begin{verbatim}
+## 
+## [[7]]
+\end{verbatim}
+
+\includegraphics{mortality-and-yll-output-report_files/figure-latex/unnamed-chunk-36-7.pdf}
+
+\begin{verbatim}
+## 
+## [[8]]
+\end{verbatim}
+
+\includegraphics{mortality-and-yll-output-report_files/figure-latex/unnamed-chunk-36-8.pdf}
+
+\begin{verbatim}
+## 
+## [[9]]
+\end{verbatim}
+
+\includegraphics{mortality-and-yll-output-report_files/figure-latex/unnamed-chunk-36-9.pdf}
+
+\begin{verbatim}
+## 
+## [[10]]
+\end{verbatim}
+
+\includegraphics{mortality-and-yll-output-report_files/figure-latex/unnamed-chunk-36-10.pdf}
+
+\begin{verbatim}
+## 
+## [[11]]
+\end{verbatim}
+
+\includegraphics{mortality-and-yll-output-report_files/figure-latex/unnamed-chunk-36-11.pdf}
+
+\begin{verbatim}
+## 
+## [[12]]
+\end{verbatim}
+
+\includegraphics{mortality-and-yll-output-report_files/figure-latex/unnamed-chunk-36-12.pdf}
+
+\begin{verbatim}
+## 
+## [[13]]
+\end{verbatim}
+
+\includegraphics{mortality-and-yll-output-report_files/figure-latex/unnamed-chunk-36-13.pdf}
+
+\begin{verbatim}
+## 
+## [[14]]
+\end{verbatim}
+
+\includegraphics{mortality-and-yll-output-report_files/figure-latex/unnamed-chunk-36-14.pdf}
+
+\begin{verbatim}
+## 
+## [[15]]
+\end{verbatim}
+
+\includegraphics{mortality-and-yll-output-report_files/figure-latex/unnamed-chunk-36-15.pdf}
+
+\begin{verbatim}
+## 
+## [[16]]
+\end{verbatim}
+
+\includegraphics{mortality-and-yll-output-report_files/figure-latex/unnamed-chunk-36-16.pdf}
+
+\end{document}
