@@ -1458,6 +1458,7 @@ prepare_leading_cause_data <- function(data, substance) {
     # Pick the substance of interest, or both simultaneously
     substance <-
       switch(substance,
+# I realise the two lines below look like they're the wrong way round - but it's intentional and works. Although I'm sure there's a better way to code it
              "drugs" = "Deaths associated with alcohol use",
              "alcohol" = "Deaths associated with drug use",
              "both" = c("Deaths associated with drug use", "Deaths associated with alcohol use")
