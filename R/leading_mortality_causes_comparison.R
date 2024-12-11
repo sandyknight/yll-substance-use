@@ -1,62 +1,49 @@
 get_all_cause_mortality <-
-function(){
-
-if (file.exists("data/processed/ons_leading_mortality_causes.csv")){
-
-ons_leading_mortality_causes <-
-read.xlsx(
-  xlsxFile = "https://www.ons.gov.uk/file?uri=/peoplepopulationandcommunity/birthsdeathsandmarriages/deaths/datasets/deathsregisteredinenglandandwalesseriesdrreferencetables/2022/dr2022corrected.xlsx",
+  function(){
+    
+    # Use cached file if it exists
+    if (file.exists("data/processed/ons_leading_mortality_causes.csv")){
+      
+      # Download and process mortality data from ONS
+      ons_leading_mortality_causes <-
+        read.xlsx(
+          xlsxFile = "https://www.ons.gov.uk/file?uri=/peoplepopulationandcommunity/birthsdeathsandmarriages/deaths/datasets/deathsregisteredinenglandandwalesseriesdrreferencetables/2022/dr2022corrected.xlsx",
           sheet = "10b",
           rows = c(6:55)) |>
-  janitor::clean_names() |>
-  as_tibble() |>
-  mutate(percentage_of_all_deaths_percent = percentage_of_all_deaths_percent / 100)
-
-return(ons_leading_mortality_causes)
-}
-}
+        janitor::clean_names() |>
+        as_tibble() |>
+        mutate(percentage_of_all_deaths_percent = percentage_of_all_deaths_percent / 100) # convert to proportion
+      
+      return(ons_leading_mortality_causes)
+    }
+  }
 
 merge_leading_cause_data <- function() {
   all_cause_mortality <- get_all_cause_mortality()
   alcohol_deaths <- merge_alcohol_deaths()
   drug_deaths <- merge_drug_deaths()
-
-
-  leading_mortality_age_groups <-
-    unique(pull(all_cause_mortality, age_group))
-
-  leading_mortality_age_groups <-
-    leading_mortality_age_groups[4:7]
-
-
-
+  
+  # Identify common age groups of interest
+  leading_mortality_age_groups <- unique(pull(all_cause_mortality, age_group))
+  leading_mortality_age_groups <- leading_mortality_age_groups[4:7] # focus on mid-age ranges
+  
+  # Filter and select top 5 causes per age group
   all_cause_mortality <-
     all_cause_mortality |>
     filter(age_group %in% leading_mortality_age_groups) |>
     group_by(age_group) |>
-    group_split()
-
-
-  all_cause_mortality <-
-    lapply(all_cause_mortality, function(x) slice(arrange(x, -deaths), 1:5))
-
-  all_cause_mortality <-
-    bind_rows(all_cause_mortality)
-
-
+    group_split() |>
+    lapply(function(x) slice(arrange(x, -deaths), 1:5)) |>
+    bind_rows()
+  
+  # Group drug deaths into similar age categories
   drug_deaths <-
     drug_deaths |>
-    filter(age < 80) |>
-    filter(age > 18) |>
+    filter(age < 80, age > 18) |>
     mutate(age_group = cut(
       age,
       breaks = c(19, 34, 49, 64, 79),
-      labels = c(
-        "20 to 34 years",
-        "35 to 49 years",
-        "50 to 64 years",
-        "65 to 79 years"
-      ),
+      labels = c("20 to 34 years","35 to 49 years","50 to 64 years","65 to 79 years"),
       right = TRUE
     )) |>
     filter(age_group %in% leading_mortality_age_groups) |>
@@ -64,8 +51,8 @@ merge_leading_cause_data <- function() {
     summarise(count = sum(count), .groups = "drop") |>
     mutate(leading_cause = "Deaths associated with drug use") |>
     select(-substance)
-
-
+  
+  # Map various age brackets to consistent age groups for alcohol data
   alcohol_deaths <-
     alcohol_deaths |>
     mutate(
@@ -91,79 +78,70 @@ merge_leading_cause_data <- function() {
     summarise(count = sum(count), .groups = "drop") |>
     mutate(leading_cause = "Deaths associated with alcohol use") |>
     select(-substance)
-
-
+  
+  # Combine all cause mortality with drug and alcohol data
   all_cause_mortality <-
     all_cause_mortality |>
     select(age_group, leading_cause, deaths) |>
     rename("count" = deaths)
-
-
+  
   leading_cause_mortality_comparison <-
     bind_rows(list(
       all_cause_mortality,
       alcohol_deaths,
       drug_deaths
-    ))
-
-  leading_cause_mortality_comparison <-
-    leading_cause_mortality_comparison |>
+    )) |>
     group_by(age_group) |>
     group_split()
-
+  
   return(leading_cause_mortality_comparison)
 }
 
-
-
 prepare_leading_cause_data <- function(data, substance) {
-  causes <-
-    pull(filter(data, !str_detect(leading_cause, "drug|alcohol")), leading_cause)
-
+  # Separate out main causes vs. drug/alcohol-associated ones
+  causes <- pull(filter(data, !str_detect(leading_cause, "drug|alcohol")), leading_cause)
+  
+  # If combined, sum drug & alcohol counts together
   if (substance == "combined") {
     data <-
       data |>
-      filter(leading_cause %in% c(
-        "Deaths associated with drug use",
-        "Deaths associated with alcohol use"
-      )) |>
+      filter(leading_cause %in% c("Deaths associated with drug use","Deaths associated with alcohol use")) |>
       group_by(age_group) |>
       summarise(count = sum(count), .groups = "drop") |>
       mutate(leading_cause = "Deaths associated with drug and alcohol use") |>
-      bind_rows(filter(data, !leading_cause %in% c(
-        "Deaths associated with drug use",
-        "Deaths associated with alcohol use"
-      )))
+      bind_rows(filter(data, !leading_cause %in% c("Deaths associated with drug use","Deaths associated with alcohol use")))
   } else {
+    # Pick the substance of interest, or both simultaneously
     substance <-
       switch(substance,
-        "drugs" = "Deaths associated with alcohol use",
-        "alcohol" = "Deaths associated with drug use",
-        "both" = c("Deaths associated with drug use", "Deaths associated with alcohol use")
+             "drugs" = "Deaths associated with alcohol use",
+             "alcohol" = "Deaths associated with drug use",
+             "both" = c("Deaths associated with drug use", "Deaths associated with alcohol use")
       )
+    
     data <-
       data |>
       filter(leading_cause %in% c(substance, causes))
-
     
     return(data)
   }
 }
 
-
 iterate_data_preparation <- function(substance) {
   leading_cause_mortality_comparison <- merge_leading_cause_data()
+  # Apply preparation for each age group subset
   lapply(leading_cause_mortality_comparison, function(data) prepare_leading_cause_data(data = data, substance = substance))
 }
 
-
 leading_cause_mortality_comparison <- function(){
-      lapply(X = c("drugs", "alcohol", "both", "combined"), FUN = iterate_data_preparation) |>
-      unlist(recursive = FALSE)
+  # Prepare data for each scenario
+  lapply(X = c("drugs", "alcohol", "both", "combined"), FUN = iterate_data_preparation) |>
+    unlist(recursive = FALSE)
 }
 
 plot_leading_cause_comparison <-
   function(data) {
+    # Bar plot comparing count of deaths by causes vs drugs and alcohol
     data |>
       arrange(count) |>
       mutate(leading_cause = forcats::as_factor(leading_cause)) |>
@@ -177,7 +155,12 @@ plot_leading_cause_comparison <-
   }
 
 
-lc_plots <- lapply(leading_cause_mortality_comparison(), plot_leading_cause_comparison)
+names(lc_plots)
 
 
-cowplot::plot_grid(plotlist = lc_plots)
+
+# Run 
+#
+# lc_plots <- lapply(leading_cause_mortality_comparison(), plot_leading_cause_comparison)
+# 
+# cowplot::plot_grid(plotlist = lc_plots)
