@@ -3,12 +3,16 @@ title: "Premature mortality and years of life lost"
 subtitle: "Deaths associated with using drugs or alcohol"
 format: 
     pptx:
-      reference-doc: OHID-PPT-template.pptx
+      reference-doc: DHSC_powerpoint_example.pptx
 date: "2024-12-11"
+execute:
+  cache: true
 ---
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = FALSE, message = FALSE, warning = FALSE, dpi = 200, fig.width = 12, fig.height = 8, cache = FALSE)
+options(device = "cairo")
+
 ```
 ```{r, include=FALSE, echo=FALSE, message=FALSE, warning=FALSE}
 library(dplyr)
@@ -20,7 +24,7 @@ library(arrow)
 library(tidyr)
 library(glue)
 library(scales)
-
+library(tidytext)
 source("R/themes.R")
 source("R/dhsc_colour_palette.R")
 ```
@@ -1405,7 +1409,7 @@ However when YLL was incorporated into the Global Burden of Disease study (GBD) 
 
 The formula is:
 
-
+    
 $$Y_x = d_x \left[ \frac{KCe^{r(n^a_x)}}{(r+\beta)^2} \left( e^{z[-(r+\beta)(e^s_x + a_x) - 1]} - e^{-(r+\beta)a_x[-(r+\beta)a_x - 1]} \right) + \frac{1-K}{r} (1 - e^{r(e^s_x)}) \right]$$
 
 \   
