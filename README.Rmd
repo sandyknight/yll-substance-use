@@ -347,7 +347,8 @@ process_deaths_in_treatment <- function(data,
   
   if (isTRUE(exclude_alcohol_specific_deaths)) {
     data <- data %>%
-      filter(death_cause != "Alcohol-specific death")
+      filter(death_cause != "Alcohol-specific death") |> 
+      filter(drug_group != "alcohol only")
   }
   
   # Group and summarize
