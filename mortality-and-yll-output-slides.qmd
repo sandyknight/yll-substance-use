@@ -1430,6 +1430,27 @@ plot_substance_use_yll_estimate()
 
 ```
 
+# Standardised YLL
+
+$$
+SYLL = \frac{\sum_i \left(w_i \frac{a_i d_i}{n_i}\right)}{\sum_i w_i} \times 100{,}000
+$$
+Where:
+ᵢ = age group (less than 1 year, 1 to 4 years, 5 to 9 years, 10 to 14 years, ..., 85 to 89 years, and 90 years and over)
+dᵢ = number of deaths in age group ᵢ
+aᵢ = weight or average age-specific period life expectancy in age group ᵢ for a given year
+nᵢ = population in age group ᵢ
+wᵢ = number of individuals in the standard population in age group ᵢ
+
+"To enable comparisons between areas and over time, age-standardised PYLL rates, also known as SYLL rates, are calculated. These rates represent the PYLL if the population of England and Wales had the same population structure as the 2013 European Standard Population (ESP). SYLL rates are presented as years of life lost per 100,000 population.
+
+PYLL is calculated as the sum of the mortality rate in each age group weighted by the potential number of years of life lost as indicated by remaining life expectancy for each age group. To calculate SYLL, this is then standardised to the 2013 ESP."
+
+
+
+
+
+
 ## Comparison with leading causes of mortality
 
 We also compared the augmented count of deaths associated with substance use with the leading causes of mortality [data](https://www.ons.gov.uk/peoplepopulationandcommunity/healthandsocialcare/causesofdeath/datasets/avoidablemortalitybylocalauthorityinenglandandwales) from the ONS. 
